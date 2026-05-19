@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import "./App.css";
 
 import {
@@ -185,8 +186,35 @@ function App() {
   const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<Set<number>>(new Set([0, 2, 5]));
   const [playlistSearch, setPlaylistSearch] = useState<string>("");
 
-  // Toasts
   const [toasts, setToasts] = useState<Array<{ id: string; message: string; type: "success" | "error" | "info" }>>([]);
+
+  // Window controls
+  const handleMinimize = async () => {
+    try {
+      const win = getCurrentWindow();
+      await win.minimize();
+    } catch (e) {
+      console.error("Error minimizing window:", e);
+    }
+  };
+
+  const handleToggleMaximize = async () => {
+    try {
+      const win = getCurrentWindow();
+      await win.toggleMaximize();
+    } catch (e) {
+      console.error("Error maximizing window:", e);
+    }
+  };
+
+  const handleClose = async () => {
+    try {
+      const win = getCurrentWindow();
+      await win.close();
+    } catch (e) {
+      console.error("Error closing window:", e);
+    }
+  };
 
   // Auto direction
   useEffect(() => {
@@ -508,7 +536,17 @@ function App() {
           <div className="lm"><i className="ti ti-arrow-bar-to-down"></i></div>
           <span className="ln">Omni<em>Drop</em></span>
         </div>
-        <div className="wc"><div className="wd"></div><div className="wd"></div><div className="wd"></div></div>
+        <div className="wc">
+          <button className="wd cls" onClick={handleClose} aria-label="Close" title={lang === "ar" ? "إغلاق" : "Close"}>
+            <i className="ti ti-x"></i>
+          </button>
+          <button className="wd min" onClick={handleMinimize} aria-label="Minimize" title={lang === "ar" ? "تصغير" : "Minimize"}>
+            <i className="ti ti-minus"></i>
+          </button>
+          <button className="wd max" onClick={handleToggleMaximize} aria-label="Maximize" title={lang === "ar" ? "تكبير" : "Maximize"}>
+            <i className="ti ti-square"></i>
+          </button>
+        </div>
       </div>
 
       <div className="main">

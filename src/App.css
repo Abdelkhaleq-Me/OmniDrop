@@ -70,23 +70,27 @@ body[dir="rtl"] {
   overflow: hidden;
 }
 
-/* Topbar */
+/* Topbar dragging and window controls */
 .tb {
+  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 18px;
   border-bottom: 0.5px solid var(--bd);
   flex-shrink: 0;
+  background: var(--bg0);
 }
 
 .logo {
+  -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .lm {
+  -webkit-app-region: no-drag;
   width: 24px;
   height: 24px;
   border-radius: 6px;
@@ -102,6 +106,7 @@ body[dir="rtl"] {
 }
 
 .ln {
+  -webkit-app-region: no-drag;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -.4px;
@@ -114,15 +119,65 @@ body[dir="rtl"] {
 }
 
 .wc {
+  -webkit-app-region: no-drag;
   display: flex;
-  gap: 5px;
+  gap: 8px;
+  align-items: center;
 }
 
 .wd {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: var(--bg4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  position: relative;
+  border: none;
+  background: none;
+  padding: 0;
+  outline: none;
+}
+
+.wd i {
+  font-size: 7px;
+  color: rgba(5, 6, 13, 0.7);
+  opacity: 0;
+  transition: opacity 0.14s;
+  pointer-events: none;
+}
+
+.wc:hover .wd i {
+  opacity: 1;
+}
+
+/* Close button - red dot */
+.wd.cls {
+  background: #f87171;
+}
+.wd.cls:hover {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+/* Minimize button - yellow dot */
+.wd.min {
+  background: #fbbf24;
+}
+.wd.min:hover {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+/* Maximize button - green dot */
+.wd.max {
+  background: #34d399;
+}
+.wd.max:hover {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
 /* Main Area */
