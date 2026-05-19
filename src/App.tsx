@@ -166,7 +166,7 @@ function App() {
   const [quality, setQuality] = useState<string>("1080");
   const [afmt, setAfmt] = useState<string>("mp3");
   const [isOptionsOpen, setIsOptionsOpen] = useState<boolean>(false);
-  const [badgeType, setBadgeType] = useState<"video" | "playlist" | null>(null);
+  const [badgeType, setBadgeType] = useState<"video" | "playlist" | "unknown" | null>(null);
 
   // Layout View mode
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
@@ -204,10 +204,11 @@ function App() {
 
   // Detect link patterns
   const detectLink = (val: string) => {
-    if (!val) return null;
-    if (/list=/i.test(val)) return 'playlist';
-    if (/youtu|tiktok|instagram|twitter|x\.com/i.test(val)) return 'video';
-    return null;
+    if (!val || !val.trim()) return null;
+    const trimmed = val.trim();
+    if (/list=/i.test(trimmed)) return 'playlist';
+    if (/youtu|tiktok|instagram|twitter|x\.com/i.test(trimmed)) return 'video';
+    return 'unknown';
   };
 
   const detectAndSetBadge = (val: string) => {
@@ -327,7 +328,7 @@ function App() {
     if (type === 'playlist') {
       // Show custom checklist selection modal matching html final
       setIsModalOpen(true);
-    } else {
+    } else if (type === 'video') {
       // Single video download
       try {
         const opts: DownloadOptions = {
@@ -336,6 +337,22 @@ function App() {
           audio_format: afmt
         };
         showToast(t.toastStarted, "info");
+        await invoke("start_download", { url: url.trim(), options: opts });
+        setUrl("");
+        setBadgeType(null);
+        refreshData();
+      } catch (err: any) {
+        showToast(err.toString(), "error");
+      }
+    } else {
+      // Unknown link: we can either try starting the download anyway or show a warning toast
+      try {
+        const opts: DownloadOptions = {
+          quality,
+          audio_only: mode === "audio",
+          audio_format: afmt
+        };
+        showToast(lang === "ar" ? "رابط غير معروف، محاولة التحميل..." : "Unknown link, attempting download...", "info");
         await invoke("start_download", { url: url.trim(), options: opts });
         setUrl("");
         setBadgeType(null);
@@ -534,7 +551,7 @@ function App() {
             <>
               {/* Input Zone */}
               <div className="iz">
-                <div className={`ush ${badgeType === 'video' ? 'valid' : badgeType === 'playlist' ? 'ispl' : ''} ${isOptionsOpen ? 'popen' : ''}`}>
+                <div className={`ush ${badgeType === 'video' ? 'valid' : badgeType === 'playlist' ? 'ispl' : badgeType === 'unknown' ? 'invalid' : ''} ${isOptionsOpen ? 'popen' : ''}`}>
                   <div className="ur">
                     <i className="ti ti-link uico"></i>
                     <input 
@@ -556,6 +573,11 @@ function App() {
                     {badgeType === 'playlist' && (
                       <div className="tbadge show pl">
                         <i className="ti ti-list"></i>{lang === "ar" ? "قائمة تشغيل" : "Playlist"}
+                      </div>
+                    )}
+                    {badgeType === 'unknown' && (
+                      <div className="tbadge show err">
+                        <i className="ti ti-alert-triangle"></i>{lang === "ar" ? "رابط غير معروف" : "Unknown Link"}
                       </div>
                     )}
 
