@@ -76,10 +76,12 @@ body[dir="rtl"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
+  height: 32px;
   border-bottom: 0.5px solid var(--bd);
   flex-shrink: 0;
   background: var(--bg0);
+  padding-inline-start: 12px;
+  padding-inline-end: 0;
 }
 
 .logo {
@@ -91,9 +93,9 @@ body[dir="rtl"] {
 
 .lm {
   -webkit-app-region: no-drag;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   background: var(--bl);
   display: flex;
   align-items: center;
@@ -101,13 +103,13 @@ body[dir="rtl"] {
 }
 
 .lm i {
-  font-size: 13px;
+  font-size: 11px;
   color: #fff;
 }
 
 .ln {
   -webkit-app-region: no-drag;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: -.4px;
   color: var(--t0);
@@ -121,63 +123,48 @@ body[dir="rtl"] {
 .wc {
   -webkit-app-region: no-drag;
   display: flex;
-  gap: 8px;
-  align-items: center;
+  height: 100%;
+  align-items: stretch;
 }
 
 .wd {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 46px;
+  height: 100%;
   cursor: pointer;
-  transition: all 0.16s ease;
-  position: relative;
   border: none;
-  background: none;
+  background: transparent;
   padding: 0;
   outline: none;
+  transition: background-color 0.12s, color 0.12s;
+  color: var(--t1);
 }
 
 .wd i {
-  font-size: 7px;
-  color: rgba(5, 6, 13, 0.7);
-  opacity: 0;
-  transition: opacity 0.14s;
+  font-size: 11px;
   pointer-events: none;
 }
 
-.wc:hover .wd i {
-  opacity: 1;
+/* Hover effects */
+.wd:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--t0);
 }
 
-/* Close button - red dot */
-.wd.cls {
-  background: #f87171;
+.wd:active {
+  background: rgba(255, 255, 255, 0.15);
 }
+
+/* Close button hover - Bright red background */
 .wd.cls:hover {
-  background: #ef4444;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+  background: #e81123 !important;
+  color: #ffffff !important;
 }
 
-/* Minimize button - yellow dot */
-.wd.min {
-  background: #fbbf24;
-}
-.wd.min:hover {
-  background: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
-}
-
-/* Maximize button - green dot */
-.wd.max {
-  background: #34d399;
-}
-.wd.max:hover {
-  background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+.wd.cls:active {
+  background: #f1707a !important;
 }
 
 /* Main Area */

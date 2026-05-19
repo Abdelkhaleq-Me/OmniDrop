@@ -537,14 +537,14 @@ function App() {
           <span className="ln">Omni<em>Drop</em></span>
         </div>
         <div className="wc">
-          <button className="wd cls" onClick={handleClose} aria-label="Close" title={lang === "ar" ? "إغلاق" : "Close"}>
-            <i className="ti ti-x"></i>
-          </button>
           <button className="wd min" onClick={handleMinimize} aria-label="Minimize" title={lang === "ar" ? "تصغير" : "Minimize"}>
             <i className="ti ti-minus"></i>
           </button>
           <button className="wd max" onClick={handleToggleMaximize} aria-label="Maximize" title={lang === "ar" ? "تكبير" : "Maximize"}>
             <i className="ti ti-square"></i>
+          </button>
+          <button className="wd cls" onClick={handleClose} aria-label="Close" title={lang === "ar" ? "إغلاق" : "Close"}>
+            <i className="ti ti-x"></i>
           </button>
         </div>
       </div>
