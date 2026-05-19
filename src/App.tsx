@@ -206,8 +206,19 @@ function App() {
   const detectLink = (val: string) => {
     if (!val || !val.trim()) return null;
     const trimmed = val.trim();
-    if (/list=/i.test(trimmed)) return 'playlist';
-    if (/youtu|tiktok|instagram|twitter|x\.com/i.test(trimmed)) return 'video';
+    
+    // Prioritize video check (e.g. watch?v= or youtu.be/) even if list= parameter is present
+    const isSingleVideo = /watch\?v=/i.test(trimmed) || /youtu\.be\//i.test(trimmed) || /tiktok\.com/i.test(trimmed) || /instagram\.com/i.test(trimmed) || /twitter\.com/i.test(trimmed) || /x\.com/i.test(trimmed);
+    if (isSingleVideo) return 'video';
+    
+    // Pure playlists
+    const isPlaylist = /list=/i.test(trimmed) || /playlist/i.test(trimmed) || /\/sets\//i.test(trimmed);
+    if (isPlaylist) return 'playlist';
+    
+    // Fallback platforms
+    const isGeneralVideoPlatform = /youtu|tiktok|instagram|twitter|x\.com/i.test(trimmed);
+    if (isGeneralVideoPlatform) return 'video';
+    
     return 'unknown';
   };
 
