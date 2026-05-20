@@ -1,0 +1,580 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#05060d;--bg1:#090b15;--bg2:#0e1020;--bg3:#13162a;--bg4:#191d35;
+  --bl:#3b82f6;--bl2:#2563eb;--bl3:#1d4ed8;
+  --bl-s:rgba(59,130,246,0.12);--bl-b:rgba(59,130,246,0.25);
+  --t0:#e2e8f8;--t1:#8b93b8;--t2:#4a5070;--t3:#272a42;
+  --bd:rgba(59,130,246,0.1);--bd2:rgba(59,130,246,0.22);
+  --s-pend:#4a5070;--s-pend-b:rgba(74,80,112,0.15);
+  --s-dl:#3b82f6;--s-dl-b:rgba(59,130,246,0.15);
+  --s-proc:#a78bfa;--s-proc-b:rgba(167,139,250,0.13);
+  --s-done:#34d399;--s-done-b:rgba(52,211,153,0.13);
+  --s-cancel:#fbbf24;--s-cancel-b:rgba(251,191,36,0.13);
+  --s-fail:#f87171;--s-fail-b:rgba(248,113,113,0.13);
+  --ff:'Inter',sans-serif;--fm:'DM Mono',monospace;
+}
+.app{font-family:var(--ff);background:var(--bg0);color:var(--t0);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:720px}
+.tb{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:0.5px solid var(--bd);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:8px}
+.lm{width:24px;height:24px;border-radius:6px;background:var(--bl);display:flex;align-items:center;justify-content:center}
+.lm i{font-size:13px;color:#fff}
+.ln{font-size:14px;font-weight:600;letter-spacing:-.4px;color:var(--t0)}
+.ln em{color:var(--bl);font-style:normal}
+.wc{display:flex;gap:5px}
+.wd{width:10px;height:10px;border-radius:50%;background:var(--bg4)}
+.main{display:flex;flex:1;overflow:hidden}
+.sb{width:56px;border-right:0.5px solid var(--bd);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:3px;flex-shrink:0}
+.nb{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all .14s;border:none;background:none}
+.nb:hover{color:var(--t1);background:var(--bg2)}
+.nb.on{color:var(--bl);background:var(--bl-s)}
+.nb i{font-size:17px}
+.nb-sp{flex:1}
+.nb-line{width:28px;height:0.5px;background:var(--bd);margin:4px 0}
+.ct{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.iz{padding:14px 14px 12px;border-bottom:0.5px solid var(--bd);flex-shrink:0}
+.ush{background:var(--bg1);border:0.5px solid var(--bd);border-radius:11px;overflow:visible;transition:border-color .2s;position:relative}
+.ush.valid{border-color:rgba(52,211,153,0.3)}
+.ush.ispl{border-color:rgba(59,130,246,0.4)}
+.ush.popen{border-radius:11px 11px 0 0}
+.ur{display:flex;align-items:center;gap:8px;padding:10px 13px}
+.uico{font-size:14px;color:var(--t2);flex-shrink:0;transition:color .2s}
+.ush.valid .uico{color:var(--s-done)}
+.ush.ispl .uico{color:var(--bl)}
+.uinp{flex:1;background:none;border:none;outline:none;font-family:var(--fm);font-size:11.5px;color:var(--t0);min-width:0}
+.uinp::placeholder{color:var(--t3)}
+.tbadge{display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:10.5px;font-family:var(--fm);font-weight:500;flex-shrink:0;white-space:nowrap}
+.tbadge.show{display:flex}
+.tbadge.vid{background:rgba(52,211,153,0.12);color:var(--s-done)}
+.tbadge.pl{background:var(--bl-s);color:var(--bl)}
+.tbadge i{font-size:12px}
+.pbtn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--t2);transition:all .14s;flex-shrink:0}
+.pbtn:hover{background:var(--bg3);color:var(--t1)}
+.pbtn i{font-size:14px}
+.tbtn{display:flex;align-items:center;gap:4px;padding:5px 9px;border-radius:6px;border:0.5px solid var(--bd);background:none;cursor:pointer;font-family:var(--ff);font-size:11px;color:var(--t1);transition:all .14s;flex-shrink:0}
+.tbtn:hover{border-color:var(--bd2);color:var(--t0)}
+.tbtn.on{border-color:var(--bl-b);color:var(--bl);background:var(--bl-s)}
+.tbtn i{font-size:12px}
+.chev{font-size:10px;transition:transform .22s}
+.tbtn.on .chev{transform:rotate(180deg)}
+.dlb{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:7px;background:var(--bl);color:#fff;font-family:var(--ff);font-size:12px;font-weight:600;border:none;cursor:pointer;flex-shrink:0;transition:background .14s}
+.dlb:hover{background:var(--bl2)}
+.dlb i{font-size:13px}
+.op{overflow:hidden;max-height:0;transition:max-height .3s cubic-bezier(.4,0,.2,1),opacity .22s;opacity:0;background:var(--bg1);border-radius:0 0 11px 11px;border:0.5px solid var(--bl-b);border-top:none}
+.op.open{max-height:220px;opacity:1}
+.oi{padding:12px 14px;display:flex;flex-direction:column;gap:11px}
+.or{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ol{font-size:10px;letter-spacing:.6px;color:var(--t2);text-transform:uppercase;min-width:40px}
+.ch{display:flex;align-items:center;gap:4px;padding:4px 9px;border-radius:6px;border:0.5px solid var(--bd);background:none;cursor:pointer;font-family:var(--fm);font-size:11px;color:var(--t1);transition:all .13s;white-space:nowrap}
+.ch:hover{border-color:var(--bd2);color:var(--t0)}
+.ch.ac{border-color:var(--bl-b);color:var(--bl);background:var(--bl-s)}
+.ch i{font-size:12px}
+.sbar{display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--bg2);border-radius:7px;border:0.5px solid var(--bd)}
+.sico{font-size:13px;color:var(--bl)}
+.stxt{font-family:var(--fm);font-size:10.5px;color:var(--t1);flex:1}
+.stxt b{color:var(--bl);font-weight:500}
+.qb{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 7px;flex-shrink:0}
+.qtl{font-size:10px;letter-spacing:.7px;color:var(--t2);text-transform:uppercase}
+.qm{display:flex;align-items:center;gap:9px}
+.bdg{font-size:10.5px;font-weight:500;padding:2px 8px;border-radius:5px;background:var(--s-dl-b);color:var(--bl);border:0.5px solid rgba(59,130,246,0.22)}
+.clrb{font-size:10.5px;color:var(--t2);background:none;border:none;cursor:pointer;font-family:inherit;transition:color .13s}
+.clrb:hover{color:var(--t1)}
+.vtg{display:flex;gap:2px;background:var(--bg1);border:0.5px solid var(--bd);border-radius:7px;padding:2px}
+.vb{width:26px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--t2);transition:all .13s}
+.vb.ac{background:var(--bg4);color:var(--t0)}
+.vb i{font-size:14px}
+.iw{flex:1;overflow-y:auto;padding:0 9px 9px;min-height:0}
+.iw::-webkit-scrollbar{width:3px}
+.iw::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+.lv{display:flex;flex-direction:column;gap:5px}
+.li{background:var(--bg1);border:0.5px solid var(--bd);border-radius:10px;padding:9px 12px;position:relative;overflow:hidden;transition:border-color .13s;display:flex;flex-direction:column;gap:6px}
+.li:hover{border-color:var(--bd2)}
+.lac{position:absolute;left:0;top:0;bottom:0;width:2.5px;border-radius:0}
+.lt{display:flex;align-items:center;gap:8px}
+.lth{width:52px;height:33px;border-radius:5px;background:var(--bg3);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
+.lth img{width:100%;height:100%;object-fit:cover}
+.lth-ic{font-size:13px;color:var(--t3)}
+.tbd{position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.8);border-radius:3px;padding:1px 3px;font-family:var(--fm);font-size:9px;color:#fff}
+.linf{flex:1;min-width:0}
+.ltit{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t0);margin-bottom:3px}
+.lsub{display:flex;align-items:center;gap:5px}
+.sd{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.stg{font-family:var(--fm);font-size:10px;color:var(--t2)}
+.dot{color:var(--t3)}
+.lax{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.iab{width:25px;height:25px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--t2);transition:all .13s}
+.iab:hover{background:var(--bg3);color:var(--t0)}
+.iab.dl:hover{background:rgba(248,113,113,0.1);color:var(--s-fail)}
+.iab i{font-size:13px}
+.pw{position:relative}
+.pt{height:3px;border-radius:2px;background:var(--bg4);overflow:hidden}
+.pf{height:100%;border-radius:2px;transition:width .4s ease}
+.pl{display:flex;justify-content:space-between;margin-top:4px}
+.plb{font-family:var(--fm);font-size:10px;color:var(--t2)}
+.gv{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:7px}
+.gi{background:var(--bg1);border:0.5px solid var(--bd);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .13s}
+.gi:hover{border-color:var(--bd2)}
+.gth{width:100%;aspect-ratio:16/9;background:var(--bg2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.gth img{width:100%;height:100%;object-fit:cover}
+.gth-ic{font-size:22px;color:var(--t3)}
+.gov{position:absolute;inset:0;background:rgba(5,6,13,0.52);display:flex;align-items:center;justify-content:center}
+.gpct{font-family:var(--fm);font-size:15px;font-weight:500;color:#fff}
+.gst{position:absolute;top:5px;left:5px;display:flex;align-items:center;gap:4px;background:rgba(5,6,13,0.8);border-radius:5px;padding:2px 6px}
+.gstd{width:5px;height:5px;border-radius:50%}
+.gstt{font-family:var(--fm);font-size:9.5px;color:#e2e8f8}
+.gpp{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.07)}
+.gpf{height:100%;transition:width .4s}
+.gb{padding:8px 9px;flex:1;display:flex;flex-direction:column;gap:4px}
+.gtit{font-size:11px;font-weight:500;line-height:1.35;color:var(--t0);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gm{display:flex;align-items:center;justify-content:space-between}
+.gta{font-family:var(--fm);font-size:10px;color:var(--t2)}
+.gas{display:flex;gap:2px}
+.gab{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--t2);transition:all .13s}
+.gab:hover{background:var(--bg3);color:var(--t0)}
+.gab i{font-size:12px}
+.stb{padding:6px 14px;border-top:0.5px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.sti{display:flex;align-items:center;gap:4px;font-family:var(--fm);font-size:10px;color:var(--t2)}
+.sti i{font-size:11px}
+.stv{color:var(--t1)}
+.sts{color:var(--t3)}
+.stsp{flex:1}
+.nsp{font-family:var(--fm);font-size:10px;color:var(--bl);display:flex;align-items:center;gap:3px}
+.nsp i{font-size:11px}
+.modal-wrap{background:rgba(5,6,13,0.84);display:flex;align-items:flex-start;justify-content:center;padding:36px 16px 16px;min-height:500px}
+.modal{background:var(--bg1);border:0.5px solid var(--bl-b);border-radius:13px;width:100%;max-width:500px;overflow:hidden;display:flex;flex-direction:column}
+.mhd{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:0.5px solid var(--bd)}
+.mhl{display:flex;flex-direction:column;gap:2px}
+.mht{font-size:13px;font-weight:600;color:var(--t0)}
+.mhs{font-size:10.5px;color:var(--t1);font-family:var(--fm)}
+.mhac{display:flex;align-items:center;gap:8px}
+.msa{font-size:11px;color:var(--bl);background:none;border:none;cursor:pointer;font-family:inherit;transition:color .13s}
+.msa:hover{color:var(--t0)}
+.mcl{width:27px;height:27px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--t1);transition:all .13s}
+.mcl:hover{background:var(--bg3);color:var(--t0)}
+.mcl i{font-size:15px}
+.mfi{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:0.5px solid var(--bd)}
+.mfin{flex:1;background:var(--bg2);border:0.5px solid var(--bd);border-radius:7px;outline:none;padding:6px 10px;font-family:var(--fm);font-size:11px;color:var(--t0);transition:border-color .15s}
+.mfin:focus{border-color:var(--bl-b)}
+.mfin::placeholder{color:var(--t3)}
+.msc{font-size:10.5px;color:var(--t1);font-family:var(--fm);white-space:nowrap}
+.msc span{color:var(--bl)}
+.ml{overflow-y:auto;max-height:250px;padding:5px 8px}
+.ml::-webkit-scrollbar{width:3px}
+.ml::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+.mi{display:flex;align-items:center;gap:8px;padding:6px 7px;border-radius:7px;cursor:pointer;transition:background .12s;border:0.5px solid transparent}
+.mi:hover{background:var(--bg2)}
+.mi.sel{background:var(--bl-s);border-color:rgba(59,130,246,.18)}
+.mcb{width:15px;height:15px;border-radius:4px;border:0.5px solid var(--bd2);background:none;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .13s}
+.mi.sel .mcb{background:var(--bl);border-color:var(--bl)}
+.mcb i{font-size:10px;color:#fff;opacity:0}
+.mi.sel .mcb i{opacity:1}
+.mith{width:42px;height:26px;border-radius:4px;background:var(--bg3);flex-shrink:0;overflow:hidden}
+.mith img{width:100%;height:100%;object-fit:cover}
+.miinf{flex:1;min-width:0}
+.mitit{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t0)}
+.misub{font-family:var(--fm);font-size:10px;color:var(--t2)}
+.midr{font-family:var(--fm);font-size:10px;color:var(--t2);flex-shrink:0}
+.mft{padding:10px 13px;border-top:0.5px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mdb{display:flex;align-items:center;gap:6px;padding:8px 15px;border-radius:7px;background:var(--bl);color:#fff;font-family:var(--ff);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:background .14s}
+.mdb:hover{background:var(--bl2)}
+.mdb i{font-size:13px}
+.mcc{font-size:11px;color:var(--t2);background:none;border:none;cursor:pointer;font-family:inherit;transition:color .13s}
+.mcc:hover{color:var(--t1)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.spin{animation:spin 1s linear infinite}
+.pulse{animation:pulse 1.4s ease infinite}
+</style>
+
+<h2 style="position:absolute;left:-9999px">OmniDrop — واجهة تحميل وسائط بهوية زرقاء داكنة</h2>
+
+<div class="app" id="app">
+  <div class="tb">
+    <div class="logo">
+      <div class="lm"><i class="ti ti-arrow-bar-to-down"></i></div>
+      <span class="ln">Omni<em>Drop</em></span>
+    </div>
+    <div class="wc"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div>
+  </div>
+
+  <div class="main">
+    <nav class="sb" aria-label="التنقل">
+      <button class="nb on" title="التحميلات" aria-label="التحميلات"><i class="ti ti-download"></i></button>
+      <button class="nb" title="السجل" aria-label="السجل"><i class="ti ti-history"></i></button>
+      <button class="nb" title="القوائم" aria-label="القوائم"><i class="ti ti-playlist"></i></button>
+      <div class="nb-sp"></div>
+      <div class="nb-line"></div>
+      <button class="nb" title="الإعدادات" aria-label="الإعدادات"><i class="ti ti-settings"></i></button>
+    </nav>
+
+    <div class="ct">
+      <div class="iz">
+        <div class="ush" id="ush">
+          <div class="ur">
+            <i class="ti ti-link uico" id="uico" aria-hidden="true"></i>
+            <input class="uinp" id="uinp" placeholder="الصق الرابط — يوتيوب، تيك توك، انستغرام، تويتر..." />
+            <div class="tbadge" id="tbadge"></div>
+            <button class="pbtn" id="pbtn" aria-label="لصق من الحافظة" title="لصق"><i class="ti ti-clipboard"></i></button>
+            <button class="tbtn" id="tbtn" aria-expanded="false">
+              <i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>خيارات
+              <i class="ti ti-chevron-down chev" aria-hidden="true"></i>
+            </button>
+            <button class="dlb" id="dlb" aria-label="تحميل"><i class="ti ti-arrow-bar-to-down"></i>تحميل</button>
+          </div>
+          <div class="op" id="opanel">
+            <div class="oi">
+              <div class="or">
+                <span class="ol">الوضع</span>
+                <div class="ch ac" data-m="video"><i class="ti ti-video" aria-hidden="true"></i>فيديو</div>
+                <div class="ch" data-m="audio"><i class="ti ti-music" aria-hidden="true"></i>صوت فقط</div>
+              </div>
+              <div class="or" id="qrow">
+                <span class="ol">الدقة</span>
+                <div class="ch" data-q="2160">4K</div>
+                <div class="ch ac" data-q="1080">1080p</div>
+                <div class="ch" data-q="720">720p</div>
+                <div class="ch" data-q="480">480p</div>
+                <div class="ch" data-q="360">360p</div>
+                <div class="ch" data-q="best">أعلى</div>
+              </div>
+              <div class="or" id="arow" style="display:none">
+                <span class="ol">الصيغة</span>
+                <div class="ch ac" data-a="mp3">MP3 · 320k</div>
+                <div class="ch" data-a="m4a">M4A · 256k</div>
+                <div class="ch" data-a="flac">FLAC</div>
+                <div class="ch" data-a="opus">OPUS</div>
+              </div>
+              <div class="sbar">
+                <i class="ti ti-info-circle sico" aria-hidden="true"></i>
+                <span class="stxt" id="stxt">فيديو · <b>1080p</b> · تحميل منفرد</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="qb">
+        <span class="qtl">قائمة التحميل</span>
+        <div class="qm">
+          <span class="bdg">3 نشط</span>
+          <button class="clrb">مسح المكتمل</button>
+          <div class="vtg" role="group" aria-label="نوع العرض">
+            <button class="vb ac" id="btnL" aria-label="قائمة"><i class="ti ti-list"></i></button>
+            <button class="vb" id="btnG" aria-label="بطاقات"><i class="ti ti-layout-grid"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="iw">
+        <div class="lv" id="lview">
+
+          <div class="li">
+            <div class="lac" style="background:var(--s-dl)"></div>
+            <div class="lt">
+              <div class="lth"><img src="https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg" alt="" onerror="this.style.display='none'"/><div class="tbd">3:32</div></div>
+              <div class="linf">
+                <div class="ltit">Never Gonna Give You Up — Rick Astley</div>
+                <div class="lsub">
+                  <div class="sd pulse" style="background:var(--s-dl)"></div>
+                  <span class="stg" style="color:var(--s-dl)">downloading</span>
+                  <span class="dot">·</span><span class="stg">1080p · mp4 · 143 MB</span>
+                </div>
+              </div>
+              <div class="lax">
+                <button class="iab" aria-label="إيقاف"><i class="ti ti-player-pause"></i></button>
+                <button class="iab dl" aria-label="إلغاء"><i class="ti ti-x"></i></button>
+              </div>
+            </div>
+            <div class="pw">
+              <div class="pt"><div class="pf" style="width:68%;background:var(--s-dl)"></div></div>
+              <div class="pl"><span class="plb" style="color:var(--s-dl)">68% · 4.2 MB/s</span><span class="plb">متبقي 12 ث</span></div>
+            </div>
+          </div>
+
+          <div class="li">
+            <div class="lac" style="background:var(--s-proc)"></div>
+            <div class="lt">
+              <div class="lth"><img src="https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg" alt="" onerror="this.style.display='none'"/></div>
+              <div class="linf">
+                <div class="ltit">Lofi Hip Hop Radio — Beats to Study</div>
+                <div class="lsub">
+                  <div class="sd spin" style="width:5px;height:5px;border-radius:50%;border:1.5px solid var(--s-proc);border-top-color:transparent"></div>
+                  <span class="stg" style="color:var(--s-proc)">processing</span>
+                  <span class="dot">·</span><span class="stg">ffmpeg · دمج A/V</span>
+                </div>
+              </div>
+              <div class="lax"><button class="iab dl" aria-label="إلغاء"><i class="ti ti-x"></i></button></div>
+            </div>
+            <div class="pw">
+              <div class="pt"><div class="pf" style="width:100%;background:var(--s-proc)"></div></div>
+              <div class="pl"><span class="plb" style="color:var(--s-proc)">دمج · آخر خطوة</span><span class="plb">لحظات...</span></div>
+            </div>
+          </div>
+
+          <div class="li">
+            <div class="lac" style="background:var(--s-pend)"></div>
+            <div class="lt">
+              <div class="lth" style="background:var(--bg3)"><i class="lth-ic ti ti-brand-instagram"></i></div>
+              <div class="linf">
+                <div class="ltit">Instagram Reel — @creator · مقطع إبداعي</div>
+                <div class="lsub">
+                  <div class="sd" style="background:var(--s-pend)"></div>
+                  <span class="stg" style="color:var(--s-pend)">pending</span>
+                  <span class="dot">·</span><span class="stg">في الانتظار</span>
+                </div>
+              </div>
+              <div class="lax"><button class="iab dl" aria-label="إلغاء"><i class="ti ti-x"></i></button></div>
+            </div>
+            <div class="pw">
+              <div class="pt"><div class="pf" style="width:0%;background:var(--s-pend)"></div></div>
+              <div class="pl"><span class="plb">في انتظار مهمة نشطة</span><span class="plb">—</span></div>
+            </div>
+          </div>
+
+          <div class="li">
+            <div class="lac" style="background:var(--s-done)"></div>
+            <div class="lt">
+              <div class="lth"><img src="https://img.youtube.com/vi/kJQP7kiw5Fk/mqdefault.jpg" alt="" onerror="this.style.display='none'"/><div class="tbd">4:44</div></div>
+              <div class="linf">
+                <div class="ltit">Despacito — Luis Fonsi ft. Daddy Yankee</div>
+                <div class="lsub">
+                  <div class="sd" style="background:var(--s-done)"></div>
+                  <span class="stg" style="color:var(--s-done)">completed</span>
+                  <span class="dot">·</span><span class="stg">mp3 · 320k · 8.4 MB</span>
+                </div>
+              </div>
+              <div class="lax">
+                <button class="iab" aria-label="فتح"><i class="ti ti-folder-open"></i></button>
+                <button class="iab dl" aria-label="حذف"><i class="ti ti-trash"></i></button>
+              </div>
+            </div>
+            <div class="pw">
+              <div class="pt"><div class="pf" style="width:100%;background:var(--s-done)"></div></div>
+              <div class="pl"><span class="plb" style="color:var(--s-done)">مكتمل</span><span class="plb">8.4 MB · 4:17 م</span></div>
+            </div>
+          </div>
+
+          <div class="li">
+            <div class="lac" style="background:var(--s-cancel)"></div>
+            <div class="lt">
+              <div class="lth" style="background:var(--bg3)"><i class="lth-ic ti ti-brand-tiktok"></i></div>
+              <div class="linf">
+                <div class="ltit">TikTok — مقطع موسيقى @user2024</div>
+                <div class="lsub">
+                  <div class="sd" style="background:var(--s-cancel)"></div>
+                  <span class="stg" style="color:var(--s-cancel)">cancelled</span>
+                  <span class="dot">·</span><span class="stg">أُلغي عند 34%</span>
+                </div>
+              </div>
+              <div class="lax">
+                <button class="iab" aria-label="إعادة"><i class="ti ti-refresh"></i></button>
+                <button class="iab dl" aria-label="حذف"><i class="ti ti-trash"></i></button>
+              </div>
+            </div>
+            <div class="pw">
+              <div class="pt"><div class="pf" style="width:34%;background:var(--s-cancel)"></div></div>
+              <div class="pl"><span class="plb" style="color:var(--s-cancel)">ملغى · 34%</span><span class="plb">—</span></div>
+            </div>
+          </div>
+
+          <div class="li">
+            <div class="lac" style="background:var(--s-fail)"></div>
+            <div class="lt">
+              <div class="lth" style="background:rgba(248,113,113,0.07)"><i class="lth-ic ti ti-alert-circle" style="color:rgba(248,113,113,0.3)"></i></div>
+              <div class="linf">
+                <div class="ltit" style="color:rgba(248,113,113,0.75)">twitter.com/x/status/17283...</div>
+                <div class="lsub">
+                  <div class="sd" style="background:var(--s-fail)"></div>
+                  <span class="stg" style="color:var(--s-fail)">failed</span>
+                  <span class="dot">·</span><span class="stg">فشل الاتصال · 5 محاولات</span>
+                </div>
+              </div>
+              <div class="lax">
+                <button class="iab" aria-label="إعادة"><i class="ti ti-refresh"></i></button>
+                <button class="iab dl" aria-label="حذف"><i class="ti ti-trash"></i></button>
+              </div>
+            </div>
+            <div class="pw">
+              <div class="pt"><div class="pf" style="width:22%;background:var(--s-fail)"></div></div>
+              <div class="pl"><span class="plb" style="color:var(--s-fail)">فشل · 22%</span><span class="plb">إعادة المحاولة؟</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="gv" id="gview" style="display:none">
+          <div class="gi"><div class="gth"><img src="https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg" alt="" onerror="this.style.display='none'"/><div class="gov"><span class="gpct">68%</span></div><div class="gst"><div class="gstd pulse" style="background:var(--s-dl)"></div><span class="gstt">downloading</span></div><div class="gpp"><div class="gpf" style="width:68%;background:var(--s-dl)"></div></div></div><div class="gb"><div class="gtit">Never Gonna Give You Up</div><div class="gm"><span class="gta">1080p · 143MB</span><span class="gta" style="color:var(--s-dl)">4.2 MB/s</span></div><div class="gm"><span class="gta">youtube</span><div class="gas"><button class="gab" aria-label="إيقاف"><i class="ti ti-player-pause"></i></button><button class="gab" aria-label="إلغاء"><i class="ti ti-x"></i></button></div></div></div></div>
+          <div class="gi"><div class="gth"><img src="https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg" alt="" onerror="this.style.display='none'"/><div class="gov"><i class="ti ti-loader spin" style="font-size:18px;color:var(--s-proc)"></i></div><div class="gst"><div class="gstd spin" style="border:1.5px solid var(--s-proc);border-top-color:transparent;border-radius:50%"></div><span class="gstt">processing</span></div><div class="gpp"><div class="gpf" style="width:100%;background:var(--s-proc)"></div></div></div><div class="gb"><div class="gtit">Lofi Hip Hop Radio</div><div class="gm"><span class="gta">mp3 · 87MB</span><span class="gta" style="color:var(--s-proc)">دمج A/V</span></div><div class="gm"><span class="gta">youtube</span><div class="gas"><button class="gab" aria-label="إلغاء"><i class="ti ti-x"></i></button></div></div></div></div>
+          <div class="gi"><div class="gth" style="background:var(--bg3)"><i class="gth-ic ti ti-brand-instagram"></i><div class="gov"><span class="gpct" style="font-size:11px;color:var(--t1)">pending</span></div><div class="gst"><div class="gstd" style="background:var(--s-pend)"></div><span class="gstt">pending</span></div><div class="gpp"><div class="gpf" style="width:0%;background:var(--s-pend)"></div></div></div><div class="gb"><div class="gtit">Instagram Reel — @creator</div><div class="gm"><span class="gta">original</span><span class="gta" style="color:var(--s-pend)">—</span></div><div class="gm"><span class="gta">instagram</span><div class="gas"><button class="gab" aria-label="إلغاء"><i class="ti ti-x"></i></button></div></div></div></div>
+          <div class="gi"><div class="gth"><img src="https://img.youtube.com/vi/kJQP7kiw5Fk/mqdefault.jpg" alt="" onerror="this.style.display='none'"/><div class="gov" style="background:rgba(5,6,13,0.3)"><i class="ti ti-check" style="font-size:22px;color:var(--s-done)"></i></div><div class="gst"><div class="gstd" style="background:var(--s-done)"></div><span class="gstt">completed</span></div><div class="gpp"><div class="gpf" style="width:100%;background:var(--s-done)"></div></div></div><div class="gb"><div class="gtit">Despacito</div><div class="gm"><span class="gta">mp3 · 8.4MB</span><span class="gta" style="color:var(--s-done)">مكتمل</span></div><div class="gm"><span class="gta">youtube</span><div class="gas"><button class="gab" aria-label="فتح"><i class="ti ti-folder-open"></i></button><button class="gab" aria-label="حذف"><i class="ti ti-trash"></i></button></div></div></div></div>
+          <div class="gi"><div class="gth" style="background:var(--bg3)"><i class="gth-ic ti ti-brand-tiktok"></i><div class="gov"><span class="gpct" style="font-size:11px;color:var(--s-cancel)">cancelled</span></div><div class="gst"><div class="gstd" style="background:var(--s-cancel)"></div><span class="gstt">cancelled</span></div><div class="gpp"><div class="gpf" style="width:34%;background:var(--s-cancel)"></div></div></div><div class="gb"><div class="gtit">TikTok — موسيقى 2024</div><div class="gm"><span class="gta">720p · 28MB</span><span class="gta" style="color:var(--s-cancel)">34%</span></div><div class="gm"><span class="gta">tiktok</span><div class="gas"><button class="gab" aria-label="إعادة"><i class="ti ti-refresh"></i></button><button class="gab" aria-label="حذف"><i class="ti ti-trash"></i></button></div></div></div></div>
+          <div class="gi"><div class="gth" style="background:rgba(248,113,113,0.06)"><i class="gth-ic ti ti-alert-circle" style="color:rgba(248,113,113,0.22)"></i><div class="gov" style="background:rgba(5,6,13,0.35)"><i class="ti ti-alert-circle" style="font-size:22px;color:var(--s-fail)"></i></div><div class="gst"><div class="gstd" style="background:var(--s-fail)"></div><span class="gstt">failed</span></div><div class="gpp"><div class="gpf" style="width:22%;background:var(--s-fail)"></div></div></div><div class="gb"><div class="gtit">twitter.com/x/status/...</div><div class="gm"><span class="gta" style="color:var(--s-fail)">فشل · 5 محاولات</span></div><div class="gm"><span class="gta">twitter</span><div class="gas"><button class="gab" aria-label="إعادة"><i class="ti ti-refresh"></i></button><button class="gab" aria-label="حذف"><i class="ti ti-trash"></i></button></div></div></div></div>
+        </div>
+      </div>
+
+      <div class="stb">
+        <div class="sti"><i class="ti ti-download"></i><span class="stv">2</span>&nbsp;نشط</div>
+        <span class="sts">·</span>
+        <div class="sti"><i class="ti ti-loader spin"></i><span class="stv">1</span>&nbsp;معالجة</div>
+        <span class="sts">·</span>
+        <div class="sti"><i class="ti ti-check"></i><span class="stv">1</span>&nbsp;مكتمل</div>
+        <span class="sts">·</span>
+        <div class="sti"><i class="ti ti-ban"></i><span class="stv">1</span>&nbsp;ملغى</div>
+        <span class="sts">·</span>
+        <div class="sti"><i class="ti ti-alert-circle"></i><span class="stv">1</span>&nbsp;فشل</div>
+        <div class="stsp"></div>
+        <div class="nsp"><i class="ti ti-activity"></i>6.3 MB/s</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mwrap" style="display:none">
+  <div class="modal-wrap">
+    <div class="modal">
+      <div class="mhd">
+        <div class="mhl">
+          <span class="mht">اختر مقاطع قائمة التشغيل</span>
+          <span class="mhs">Best of Lo-Fi Music 2024 · 8 مقاطع</span>
+        </div>
+        <div class="mhac">
+          <button class="msa" id="msa">تحديد الكل</button>
+          <button class="mcl" id="mcl" aria-label="إغلاق"><i class="ti ti-x"></i></button>
+        </div>
+      </div>
+      <div class="mfi">
+        <input class="mfin" id="msrch" placeholder="بحث في القائمة..."/>
+        <span class="msc">محدد: <span id="mscn">3</span></span>
+      </div>
+      <div class="ml" id="mlist"></div>
+      <div class="mft">
+        <button class="mcc" id="mcc">إلغاء</button>
+        <button class="mdb" id="mdb"><i class="ti ti-arrow-bar-to-down"></i>تحميل 3 مقاطع</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const uinp=document.getElementById('uinp');
+  const ush=document.getElementById('ush');
+  const tbadge=document.getElementById('tbadge');
+  const tbtn=document.getElementById('tbtn');
+  const opanel=document.getElementById('opanel');
+  const dlb=document.getElementById('dlb');
+  const pbtn=document.getElementById('pbtn');
+  const btnL=document.getElementById('btnL');
+  const btnG=document.getElementById('btnG');
+  const lview=document.getElementById('lview');
+  const gview=document.getElementById('gview');
+  const qrow=document.getElementById('qrow');
+  const arow=document.getElementById('arow');
+  const stxt=document.getElementById('stxt');
+  const mwrap=document.getElementById('mwrap');
+  const mcl=document.getElementById('mcl');
+  const mcc=document.getElementById('mcc');
+  const mdb=document.getElementById('mdb');
+  const msa=document.getElementById('msa');
+  const msrch=document.getElementById('msrch');
+  const mlist=document.getElementById('mlist');
+  const mscn=document.getElementById('mscn');
+
+  let popen=false, mode='video', quality='1080', afmt='mp3';
+  let sel=new Set([0,2,5]);
+
+  const videos=[
+    {id:0,t:'Lofi Study Mix — 2 Hours',ch:'ChillHop',dur:'2:03',vid:'jfKfPfyJRdk'},
+    {id:1,t:'Jazz Hop Café — Smooth Beats',ch:'Jazz Hop',dur:'1:22',vid:'Dx5qFachd3A'},
+    {id:2,t:'Rainy Day Lofi — Focus Music',ch:'Lofi Girl',dur:'58:32',vid:'dQw4w9WgXcQ'},
+    {id:3,t:'Late Night Coding Mix',ch:'Coding in Flow',dur:'1:45',vid:'jfKfPfyJRdk'},
+    {id:4,t:'Morning Coffee Lofi',ch:'College Music',dur:'44:12',vid:'kJQP7kiw5Fk'},
+    {id:5,t:'Aesthetic Lofi — Pink Vibes',ch:'Aesthetic Lofi',dur:'1:10',vid:'dQw4w9WgXcQ'},
+    {id:6,t:'Midnight Drive Synthwave',ch:'NightRide FM',dur:'2:20',vid:'jfKfPfyJRdk'},
+    {id:7,t:'Deep Focus — 4 Hours Mix',ch:'Study Music',dur:'4:00',vid:'kJQP7kiw5Fk'},
+  ];
+
+  function detect(v){
+    if(!v)return null;
+    if(/list=/i.test(v))return'playlist';
+    if(/youtu|tiktok|instagram|twitter|x\.com/i.test(v))return'video';
+    return null;
+  }
+
+  function setUrl(v){
+    const t=detect(v);
+    ush.classList.remove('valid','ispl');
+    tbadge.className='tbadge';
+    if(t==='video'){ush.classList.add('valid');tbadge.innerHTML='<i class="ti ti-video" aria-hidden="true"></i>فيديو';tbadge.classList.add('show','vid');}
+    else if(t==='playlist'){ush.classList.add('ispl');tbadge.innerHTML='<i class="ti ti-list" aria-hidden="true"></i>قائمة تشغيل';tbadge.classList.add('show','pl');}
+    return t;
+  }
+
+  uinp.addEventListener('input',()=>setUrl(uinp.value));
+
+  pbtn.addEventListener('click',()=>{
+    uinp.value='https://youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknc9TTnkwVquh';
+    setUrl(uinp.value);
+  });
+
+  dlb.addEventListener('click',()=>{
+    if(detect(uinp.value)==='playlist'){mwrap.style.display='block';render();upd();}
+  });
+
+  tbtn.addEventListener('click',()=>{
+    popen=!popen;
+    opanel.classList.toggle('open',popen);
+    ush.classList.toggle('popen',popen);
+    tbtn.classList.toggle('on',popen);
+    tbtn.setAttribute('aria-expanded',popen);
+  });
+
+  document.querySelectorAll('[data-m]').forEach(c=>{
+    c.addEventListener('click',()=>{
+      document.querySelectorAll('[data-m]').forEach(x=>x.classList.remove('ac'));
+      c.classList.add('ac');mode=c.dataset.m;
+      qrow.style.display=mode==='audio'?'none':'flex';
+      arow.style.display=mode==='audio'?'flex':'none';
+      us();
+    });
+  });
+  document.querySelectorAll('[data-q]').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('[data-q]').forEach(x=>x.classList.remove('ac'));c.classList.add('ac');quality=c.dataset.q;us();});});
+  document.querySelectorAll('[data-a]').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('[data-a]').forEach(x=>x.classList.remove('ac'));c.classList.add('ac');afmt=c.dataset.a;us();});});
+
+  function us(){
+    const qm={'2160':'4K','1080':'1080p','720':'720p','480':'480p','360':'360p','best':'أعلى'};
+    stxt.innerHTML=mode==='video'?`فيديو · <b>${qm[quality]||quality}</b> · تحميل منفرد`:`صوت · <b>${afmt.toUpperCase()}</b> · تحميل منفرد`;
+  }
+
+  btnL.addEventListener('click',()=>{btnL.classList.add('ac');btnG.classList.remove('ac');lview.style.display='flex';gview.style.display='none';});
+  btnG.addEventListener('click',()=>{btnG.classList.add('ac');btnL.classList.remove('ac');gview.style.display='grid';lview.style.display='none';});
+
+  function render(f=''){
+    mlist.innerHTML='';
+    videos.filter(v=>!f||v.t.toLowerCase().includes(f.toLowerCase())).forEach(v=>{
+      const s=sel.has(v.id);
+      const d=document.createElement('div');
+      d.className='mi'+(s?' sel':'');
+      d.innerHTML=`<div class="mcb"><i class="ti ti-check" aria-hidden="true"></i></div><div class="mith"><img src="https://img.youtube.com/vi/${v.vid}/mqdefault.jpg" alt="" onerror="this.style.display='none'"/></div><div class="miinf"><div class="mitit">${v.t}</div><div class="misub">${v.ch}</div></div><div class="midr">${v.dur}</div>`;
+      d.addEventListener('click',()=>{sel.has(v.id)?sel.delete(v.id):sel.add(v.id);render(msrch.value);upd();});
+      mlist.appendChild(d);
+    });
+  }
+
+  function upd(){
+    const n=sel.size;
+    mscn.textContent=n;
+    mdb.innerHTML=`<i class="ti ti-arrow-bar-to-down" aria-hidden="true"></i>تحميل ${n} مقطع`;
+    msa.textContent=sel.size===videos.length?'إلغاء الكل':'تحديد الكل';
+  }
+
+  [mcl,mcc,mdb].forEach(b=>b.addEventListener('click',()=>{mwrap.style.display='none';}));
+  msa.addEventListener('click',()=>{
+    sel.size===videos.length?sel.clear():videos.forEach(v=>sel.add(v.id));
+    render(msrch.value);upd();
+  });
+  msrch.addEventListener('input',()=>render(msrch.value));
+})();
+</script>

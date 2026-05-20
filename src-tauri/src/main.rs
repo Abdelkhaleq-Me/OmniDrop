@@ -166,7 +166,11 @@ async fn main() {
             commands::get_collection_history,
             commands::get_active_downloads,
             commands::delete_download,
+            commands::delete_collection,
             commands::clear_completed_downloads,
+            commands::clear_all_downloads,
+            commands::fetch_playlist_info,
+            commands::fetch_media_details,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {

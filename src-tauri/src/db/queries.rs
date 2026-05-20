@@ -359,8 +359,72 @@ pub async fn delete_download(
     pool: &SqlitePool,
     id: &str,
 ) -> Result<(), AppError> {
+    // 1. الحصول على معرف المجموعة المرتبط (إن وجد)
+    let collection_id: Option<String> = sqlx::query_scalar("SELECT collection_id FROM downloads WHERE id = ?")
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+
+    // 2. حذف التحميل
     sqlx::query("DELETE FROM downloads WHERE id = ?")
         .bind(id)
+        .execute(pool)
+        .await?;
+
+    // 3. تحديث حالة المجموعة بناءً على حالة العناصر المتبقية
+    if let Some(ref cid) = collection_id {
+        let status = get_collection_aggregate_status(pool, cid).await?;
+        update_collection_status(pool, cid, &status).await?;
+    }
+
+    Ok(())
+}
+
+/// حساب حالة المجموعة التراكمية بناءً على عناصرها الفرعية
+pub async fn get_collection_aggregate_status(
+    pool: &SqlitePool,
+    collection_id: &str,
+) -> Result<String, AppError> {
+    let statuses: Vec<String> = sqlx::query_scalar("SELECT status FROM downloads WHERE collection_id = ?")
+        .bind(collection_id)
+        .fetch_all(pool)
+        .await?;
+
+    if statuses.is_empty() {
+        return Ok("completed".to_string());
+    }
+
+    if statuses.iter().any(|s| s == "downloading" || s == "pending" || s == "processing" || s == "fetching_metadata") {
+        return Ok("downloading".to_string());
+    }
+
+    if statuses.iter().all(|s| s == "completed") {
+        return Ok("completed".to_string());
+    }
+
+    if statuses.iter().all(|s| s == "cancelled") {
+        return Ok("cancelled".to_string());
+    }
+
+    if statuses.iter().all(|s| s == "failed") {
+        return Ok("failed".to_string());
+    }
+
+    Ok("completed".to_string())
+}
+
+/// حذف مجموعة (قائمة تشغيل) وجميع عناصرها الفرعية من قاعدة البيانات
+pub async fn delete_collection(
+    pool: &SqlitePool,
+    collection_id: &str,
+) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM downloads WHERE collection_id = ?")
+        .bind(collection_id)
+        .execute(pool)
+        .await?;
+
+    sqlx::query("DELETE FROM collections WHERE id = ?")
+        .bind(collection_id)
         .execute(pool)
         .await?;
 
@@ -376,4 +440,19 @@ pub async fn clear_completed(
         .await?;
 
     Ok(result.rows_affected())
+}
+
+/// حذف جميع التحميلات والمجموعات من قاعدة البيانات بالكامل
+pub async fn clear_all(
+    pool: &SqlitePool,
+) -> Result<u64, AppError> {
+    let result_downloads = sqlx::query("DELETE FROM downloads")
+        .execute(pool)
+        .await?;
+
+    sqlx::query("DELETE FROM collections")
+        .execute(pool)
+        .await?;
+
+    Ok(result_downloads.rows_affected())
 }

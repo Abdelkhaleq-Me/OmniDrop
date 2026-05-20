@@ -1,0 +1,79 @@
+// src/hooks/useMediaDetails.ts
+// ═══════════════════════════════════════════════════════════════
+// Hook لجلب البيانات الوصفية مسبقاً مع debounce + تقدير الأحجام
+// ═══════════════════════════════════════════════════════════════
+
+import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { MediaDetails } from "../types";
+import { isQualitySupported, formatBytes, detectLinkType } from "../utils/format";
+
+interface UseMediaDetailsReturn {
+  mediaDetails: MediaDetails | null;
+  isPrefetching: boolean;
+  getSelectedQualitySize: () => string | null;
+}
+
+export function useMediaDetails(
+  url: string,
+  quality: string,
+  setQuality: (q: string) => void,
+): UseMediaDetailsReturn {
+  const [mediaDetails, setMediaDetails] = useState<MediaDetails | null>(null);
+  const [isPrefetching, setIsPrefetching] = useState(false);
+
+  // Debounced prefetch عند تغيير الرابط
+  useEffect(() => {
+    if (!url || !url.trim()) {
+      setMediaDetails(null);
+      return;
+    }
+
+    const type = detectLinkType(url);
+    if (type === "unknown" || !type) {
+      setMediaDetails(null);
+      return;
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      setIsPrefetching(true);
+      setMediaDetails(null);
+      try {
+        const details = await invoke<MediaDetails>("fetch_media_details", { url: url.trim() });
+        setMediaDetails(details);
+
+        // تعديل تلقائي للجودة إذا كانت غير مدعومة
+        if (!details.is_playlist && details.max_height > 0) {
+          const currentHeight = parseInt(quality, 10);
+          if (!isQualitySupported(currentHeight, details.max_height)) {
+            const targetHeights = [360, 480, 720, 1080, 1440, 2160];
+            const supported = targetHeights.filter(h => isQualitySupported(h, details.max_height));
+            if (supported.length > 0) {
+              const bestSupportedHeight = Math.max(...supported);
+              setQuality(bestSupportedHeight.toString());
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to prefetch media details:", err);
+      } finally {
+        setIsPrefetching(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(delayDebounce);
+  }, [url]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** حساب الحجم المقدّر للجودة المحددة حالياً */
+  const getSelectedQualitySize = (): string | null => {
+    if (!mediaDetails || !mediaDetails.qualities) return null;
+    const currentHeight = parseInt(quality, 10);
+    const qInfo = mediaDetails.qualities.find(q => q.height === currentHeight);
+    if (qInfo && qInfo.size_bytes) {
+      return formatBytes(qInfo.size_bytes);
+    }
+    return null;
+  };
+
+  return { mediaDetails, isPrefetching, getSelectedQualitySize };
+}

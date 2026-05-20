@@ -7,6 +7,7 @@ use std::sync::Arc;
 use tauri::AppHandle;
 
 /// إعدادات التطبيق القابلة للتخصيص
+#[allow(dead_code)]
 pub struct AppConfig {
     pub default_download_path: std::path::PathBuf,
     pub max_concurrent_downloads: usize,
@@ -31,6 +32,7 @@ pub struct AppState {
     pub progress_buffer: std::sync::Mutex<std::collections::HashMap<String, crate::core::parser::ProgressData>>,
 
     /// رابط لمحرك Tauri: لإرسال أحداث (Events) من خلف الكواليس
+    #[allow(dead_code)]
     pub app_handle: AppHandle,
 
     /// توكن للإغلاق الآمن للمهام الخلفية عند إغلاق التطبيق

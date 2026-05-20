@@ -195,6 +195,7 @@ pub async fn run_playlist_download(
     collection_id: String,
     url: String,
     options: DownloadOptions,
+    selected_indices: Option<Vec<usize>>,
     token: CancellationToken,
 ) {
     // ── المرحلة 1: استخراج بيانات قائمة التشغيل ──────────────
@@ -229,7 +230,10 @@ pub async fn run_playlist_download(
     };
 
     // ── المرحلة 3: تحديث بيانات المجموعة في DB ───────────────
-    let total_items = entries.len() as i64;
+    let total_items = match &selected_indices {
+        Some(indices) => indices.len() as i64,
+        None => entries.len() as i64,
+    };
     let _ = queries::update_collection_metadata(
         &state.db_pool,
         &collection_id,
@@ -243,6 +247,13 @@ pub async fn run_playlist_download(
     let mut child_handles = Vec::new();
 
     for (index, entry) in entries.iter().enumerate() {
+        // تخطي الفيديوهات غير المحددة في الواجهة
+        if let Some(ref indices) = selected_indices {
+            if !indices.contains(&index) {
+                continue;
+            }
+        }
+
         // التحقق من الإلغاء قبل كل عنصر
         if token.is_cancelled() {
             let _ = queries::update_collection_status(&state.db_pool, &collection_id, "cancelled").await;
@@ -255,7 +266,7 @@ pub async fn run_playlist_download(
             _ => match &entry.id {
                 Some(id) => format!("https://www.youtube.com/watch?v={}", id),
                 None => continue, // تخطي العناصر بدون رابط
-            }
+            },
         };
 
         let task_id = Uuid::new_v4().to_string();
@@ -313,7 +324,14 @@ pub async fn run_playlist_download(
                 state_clone.cleanup_task(&cid_clone);
             }
             _ = futures::future::join_all(child_handles) => {
-                // تنظيف Token المجموعة من الذاكرة لضمان عدم تسريب الموارد
+                // 1. تحديث حالة المجموعة بناءً على حالة عناصرها الفرعية في قاعدة البيانات
+                let status = match queries::get_collection_aggregate_status(&state_clone.db_pool, &cid_clone).await {
+                    Ok(s) => s,
+                    Err(_) => "completed".to_string(),
+                };
+                let _ = queries::update_collection_status(&state_clone.db_pool, &cid_clone, &status).await;
+
+                // 2. تنظيف Token المجموعة من الذاكرة لضمان عدم تسريب الموارد
                 state_clone.cleanup_task(&cid_clone);
             }
         }
@@ -326,7 +344,7 @@ pub async fn run_playlist_download(
 
 /// يستدعي yt-dlp بوضع --flat-playlist لاستخراج قائمة الفيديوهات
 /// بدون تحميلها فعلياً. يُرجع PlaylistInfo مع جميع العناصر.
-async fn fetch_playlist_info(
+pub async fn fetch_playlist_info(
     app_handle: &AppHandle,
     url: &str,
 ) -> Result<crate::core::parser::PlaylistInfo, AppError> {
@@ -428,6 +446,7 @@ async fn spawn_ytdlp(
     let mut args: Vec<String> = vec![
         "--newline".to_string(),
         "--no-playlist".to_string(),
+        "--no-warnings".to_string(),
         // قالب JSON للتقدم
         "--progress-template".to_string(),
         r#"{"progress":"%(progress._percent_str)s","speed":"%(progress._speed_str)s","eta":"%(progress._eta_str)s"}"#.to_string(),
@@ -469,7 +488,7 @@ async fn spawn_ytdlp(
 }
 
 /// يحدد المسار الدقيق لملف ffmpeg التنفيذي أو مجلده (مع دعم Target Triple والمنصات المختلفة)
-fn resolve_ffmpeg_path(app_handle: &AppHandle) -> Result<String, AppError> {
+pub fn resolve_ffmpeg_path(app_handle: &AppHandle) -> Result<String, AppError> {
     let target_triple = match (std::env::consts::OS, std::env::consts::ARCH) {
         ("windows", "x86_64") => "x86_64-pc-windows-msvc",
         ("macos", "x86_64") => "x86_64-apple-darwin",
@@ -542,97 +561,106 @@ async fn process_event_stream(
 ) -> Result<(), AppError> {
     let mut metadata_extracted = false;
     let mut detected_file_path: Option<String> = None;
+    let mut stdout_buffer = Vec::new();
 
     while let Some(event) = rx.recv().await {
         match event {
             CommandEvent::Stdout(line_bytes) => {
-                let line = String::from_utf8_lossy(&line_bytes);
-
-                // 1. محاولة استخراج البيانات الوصفية (مرة واحدة فقط)
-                if !metadata_extracted {
-                    if let Some(info) = try_parse_media_info(&line) {
-                        metadata_extracted = true;
-
-                        let duration_i64 = info.duration.map(|d| d as i64);
-                        let file_size = info.filesize.or(info.filesize_approx);
-
-                        let _ = queries::update_metadata(
-                            &state.db_pool,
-                            task_id,
-                            info.title.as_deref(),
-                            info.uploader.as_deref(),
-                            info.thumbnail.as_deref(),
-                            duration_i64,
-                            info.ext.as_deref(),
-                            file_size,
-                        ).await;
-
-                        let _ = app_handle.emit("download-metadata", &info);
+                stdout_buffer.extend_from_slice(&line_bytes);
+                while let Some(pos) = stdout_buffer.iter().position(|&b| b == b'\n') {
+                    let line_bytes = stdout_buffer.drain(..=pos).collect::<Vec<u8>>();
+                    let line = String::from_utf8_lossy(&line_bytes);
+                    let line = line.trim();
+                    if line.is_empty() {
+                        continue;
                     }
-                }
 
-                // 2. محاولة تحليل بيانات التقدم وحفظها في البفر للـ Batching
-                if let Some(progress) = try_parse_progress(&line, task_id) {
-                    let mut buffer = state.progress_buffer
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner());
-                    buffer.insert(task_id.to_string(), progress);
-                }
+                    // 1. محاولة استخراج البيانات الوصفية (مرة واحدة فقط)
+                    if !metadata_extracted {
+                        if let Some(info) = try_parse_media_info(&line) {
+                            metadata_extracted = true;
 
-                // 3. الكشف عن بدء مرحلة المعالجة والدمج (Post-processing)
-                if line.contains("[Merger]") || line.contains("[ExtractAudio]") || line.contains("[VideoConvertor]") || line.contains("[Metadata]") {
-                    let _ = queries::update_status(&state.db_pool, task_id, "processing").await;
-                    let mut buffer = state.progress_buffer
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner());
-                    buffer.insert(task_id.to_string(), ProgressData {
-                        task_id: task_id.to_string(),
-                        percent: Some("100%".to_string()),
-                        speed: None,
-                        eta: None,
-                        status: "processing".to_string(),
-                    });
-                }
+                            let duration_i64 = info.duration.map(|d| d as i64);
+                            let file_size = info.filesize.or(info.filesize_approx);
 
-                // 4. محاولة استخراج مسار الملف النهائي من مخرجات yt-dlp
-                let mut path_to_set = None;
-                if let Some(pos) = line.find("__OMNIDROP_FINAL_PATH__") {
-                    let path = line[pos + "__OMNIDROP_FINAL_PATH__".len()..].trim().to_string();
-                    if !path.is_empty() {
-                        path_to_set = Some(path);
+                            let _ = queries::update_metadata(
+                                &state.db_pool,
+                                task_id,
+                                info.title.as_deref(),
+                                info.uploader.as_deref(),
+                                info.thumbnail.as_deref(),
+                                duration_i64,
+                                info.ext.as_deref(),
+                                file_size,
+                            ).await;
+
+                            let _ = app_handle.emit("download-metadata", &info);
+                        }
                     }
-                } else if let Some(pos) = line.find("[download] Destination:") {
-                    let path = line[pos + "[download] Destination:".len()..].trim().to_string();
-                    if !path.is_empty() {
-                        path_to_set = Some(path);
+
+                    // 2. محاولة تحليل بيانات التقدم وحفظها في البفر للـ Batching
+                    if let Some(progress) = try_parse_progress(&line, task_id) {
+                        let mut buffer = state.progress_buffer
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        buffer.insert(task_id.to_string(), progress);
                     }
-                } else if let Some(pos) = line.find("[ExtractAudio] Destination:") {
-                    let path = line[pos + "[ExtractAudio] Destination:".len()..].trim().to_string();
-                    if !path.is_empty() {
-                        path_to_set = Some(path);
+
+                    // 3. الكشف عن بدء مرحلة المعالجة والدمج (Post-processing)
+                    if line.contains("[Merger]") || line.contains("[ExtractAudio]") || line.contains("[VideoConvertor]") || line.contains("[Metadata]") {
+                        let _ = queries::update_status(&state.db_pool, task_id, "processing").await;
+                        let mut buffer = state.progress_buffer
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        buffer.insert(task_id.to_string(), ProgressData {
+                            task_id: task_id.to_string(),
+                            percent: Some("100%".to_string()),
+                            speed: None,
+                            eta: None,
+                            status: "processing".to_string(),
+                        });
                     }
-                } else if line.contains("Merging formats into") {
-                    if let Some(start_quote) = line.find('"') {
-                        if let Some(end_quote) = line.rfind('"') {
-                            if end_quote > start_quote {
-                                let path = line[start_quote + 1..end_quote].to_string();
-                                if !path.is_empty() {
-                                    path_to_set = Some(path);
+
+                    // 4. محاولة استخراج مسار الملف النهائي من مخرجات yt-dlp
+                    let mut path_to_set = None;
+                    if let Some(pos) = line.find("__OMNIDROP_FINAL_PATH__") {
+                        let path = line[pos + "__OMNIDROP_FINAL_PATH__".len()..].trim().to_string();
+                        if !path.is_empty() {
+                            path_to_set = Some(path);
+                        }
+                    } else if let Some(pos) = line.find("[download] Destination:") {
+                        let path = line[pos + "[download] Destination:".len()..].trim().to_string();
+                        if !path.is_empty() {
+                            path_to_set = Some(path);
+                        }
+                    } else if let Some(pos) = line.find("[ExtractAudio] Destination:") {
+                        let path = line[pos + "[ExtractAudio] Destination:".len()..].trim().to_string();
+                        if !path.is_empty() {
+                            path_to_set = Some(path);
+                        }
+                    } else if line.contains("Merging formats into") {
+                        if let Some(start_quote) = line.find('"') {
+                            if let Some(end_quote) = line.rfind('"') {
+                                if end_quote > start_quote {
+                                    let path = line[start_quote + 1..end_quote].to_string();
+                                    if !path.is_empty() {
+                                        path_to_set = Some(path);
+                                    }
                                 }
                             }
                         }
+                    } else if let Some(pos) = line.find("has already been downloaded") {
+                        let path = line[..pos].replace("[download]", "").trim().to_string();
+                        if !path.is_empty() {
+                            path_to_set = Some(path);
+                        }
                     }
-                } else if let Some(pos) = line.find("has already been downloaded") {
-                    let path = line[..pos].replace("[download]", "").trim().to_string();
-                    if !path.is_empty() {
-                        path_to_set = Some(path);
-                    }
-                }
 
-                if let Some(path) = path_to_set {
-                    detected_file_path = Some(path.clone());
-                    if let Ok(mut lock) = detected_path.lock() {
-                        *lock = Some(path);
+                    if let Some(path) = path_to_set {
+                        detected_file_path = Some(path.clone());
+                        if let Ok(mut lock) = detected_path.lock() {
+                            *lock = Some(path);
+                        }
                     }
                 }
             }

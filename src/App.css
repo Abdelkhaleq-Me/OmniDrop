@@ -71,7 +71,7 @@ body[dir="rtl"] {
 }
 
 /* Topbar dragging and window controls */
-.tb {
+.topbar {
   -webkit-app-region: drag;
   display: flex;
   align-items: center;
@@ -176,7 +176,7 @@ body[dir="rtl"] {
 }
 
 /* Sidebar navigation */
-.sb {
+.sidebar {
   width: 56px;
   border-inline-end: 0.5px solid var(--bd);
   display: flex;
@@ -489,7 +489,7 @@ body[dir="rtl"] {
   min-width: 50px;
 }
 
-.ch {
+.chip {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -505,18 +505,18 @@ body[dir="rtl"] {
   white-space: nowrap;
 }
 
-.ch:hover {
+.chip:hover {
   border-color: var(--bd2);
   color: var(--t0);
 }
 
-.ch.ac {
+.chip.ac {
   border-color: var(--bl-b);
   color: var(--bl);
   background: var(--bl-s);
 }
 
-.ch i {
+.chip i {
   font-size: 12px;
 }
 
@@ -1577,4 +1577,73 @@ body[dir="rtl"] .toast-wrap {
 
 .no-items span {
   font-size: 11px;
+}
+
+/* Playlist modal loading states */
+.modal-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 16px;
+}
+
+.glowing-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255, 255, 255, 0.05);
+  border-top-color: var(--bl);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.2);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.modal-loading-text {
+  font-size: 11px;
+  color: var(--t2);
+  letter-spacing: -0.2px;
+}
+
+.mith-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.mith-placeholder i {
+  font-size: 16px;
+  color: var(--t3);
+}
+
+/* Size Bar and Mini Spinner styles */
+.size-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 8px;
+}
+
+.mini-spinner {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--bl);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }

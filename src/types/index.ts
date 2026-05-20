@@ -68,3 +68,46 @@ export interface PlaylistStartedData {
   total_items: number;
   task_ids: string[];
 }
+
+// ── أنواع الواجهة الجديدة ─────────────────────────────
+
+/** بيانات وصفية مُجلبة مسبقاً من الباكأند */
+export interface QualityInfo {
+  height: number;
+  size_bytes: number | null;
+}
+
+export interface MediaDetails {
+  is_playlist: boolean;
+  max_height: number;
+  qualities: QualityInfo[];
+}
+
+/** عنصر فيديو في نافذة اختيار قائمة التشغيل */
+export interface PlaylistVideoItem {
+  id: number;
+  title: string;
+  channel: string;
+  duration: string;
+  videoId: string;
+  url: string;
+}
+
+/** إشعار Toast */
+export interface ToastItem {
+  id: string;
+  message: string;
+  type: "success" | "error" | "info";
+}
+
+/** بيانات قائمة التشغيل المُجلبة من الباكأند */
+export interface PlaylistInfoResponse {
+  title: string | null;
+  uploader: string | null;
+  entries: Array<{
+    title: string | null;
+    id: string | null;
+    url: string | null;
+    duration: number | null;
+  }>;
+}

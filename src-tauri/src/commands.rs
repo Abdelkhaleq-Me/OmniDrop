@@ -95,6 +95,7 @@ pub async fn start_download(
 pub async fn start_playlist_download(
     url: String,
     options: Option<DownloadOptions>,
+    selected_indices: Option<Vec<usize>>,
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, Arc<AppState>>,
 ) -> Result<String, AppError> {
@@ -128,11 +129,198 @@ pub async fn start_playlist_download(
             cid_clone,
             url,
             opts,
+            selected_indices,
             token,
         ).await;
     });
 
     Ok(collection_id)
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  أمر استخراج بيانات قائمة التشغيل (بدون تحميل)
+// ═══════════════════════════════════════════════════════════════
+
+/// يستخرج معلومات الفيديوهات المكونة لقائمة التشغيل بدون تحميلها.
+#[tauri::command]
+pub async fn fetch_playlist_info(
+    url: String,
+    app_handle: tauri::AppHandle,
+) -> Result<crate::core::parser::PlaylistInfo, AppError> {
+    let url = url.trim().to_string();
+    validate_url(&url)?;
+
+    let info = downloader::fetch_playlist_info(&app_handle, &url).await?;
+    Ok(info)
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  بيانات تفاصيل المحتوى والجودات والأحجام التقريبية
+// ═══════════════════════════════════════════════════════════════
+
+#[derive(Debug, serde::Serialize)]
+pub struct QualityInfo {
+    pub label: String,
+    pub height: i32,
+    pub size_bytes: i64,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct MediaDetails {
+    pub title: String,
+    pub is_playlist: bool,
+    pub total_duration: f64,
+    pub max_height: i32,
+    pub qualities: Vec<QualityInfo>,
+}
+
+/// يستخرج تفاصيل المحتوى والجودات والأحجام التقريبية لكل جودة.
+#[tauri::command]
+pub async fn fetch_media_details(
+    url: String,
+    app_handle: tauri::AppHandle,
+) -> Result<MediaDetails, AppError> {
+    use crate::core::downloader::resolve_ffmpeg_path;
+    use tauri_plugin_shell::ShellExt;
+
+    let url = url.trim().to_string();
+    validate_url(&url)?;
+
+    let is_playlist_link = url.contains("list=") || url.contains("playlist") || url.contains("/sets/");
+
+    if is_playlist_link {
+        // جلب بيانات قائمة التشغيل
+        let info = downloader::fetch_playlist_info(&app_handle, &url).await?;
+        let title = info.title.unwrap_or_else(|| "قائمة تشغيل".to_string());
+        
+        let mut total_duration = 0.0;
+        if let Some(entries) = info.entries {
+            for entry in entries {
+                if let Some(dur) = entry.duration {
+                    total_duration += dur;
+                }
+            }
+        }
+
+        // إنشاء الأحجام التقديرية لكل جودة مستهدفة
+        let mut qualities = Vec::new();
+        let target_heights = [
+            ("360p", 360, 62_500),
+            ("480p", 480, 125_000),
+            ("720p", 720, 312_500),
+            ("1080p", 1080, 625_000),
+            ("2K", 1440, 1_250_000),
+            ("4K", 2160, 2_500_000),
+        ];
+
+        for (label, height, bps) in target_heights {
+            let size_bytes = (total_duration * bps as f64) as i64;
+            qualities.push(QualityInfo {
+                label: label.to_string(),
+                height,
+                size_bytes,
+            });
+        }
+
+        Ok(MediaDetails {
+            title,
+            is_playlist: true,
+            total_duration,
+            max_height: 2160,
+            qualities,
+        })
+    } else {
+        // جلب بيانات فيديو فردي باستخدام --dump-json
+        let ffmpeg_location = resolve_ffmpeg_path(&app_handle)?;
+        let shell = app_handle.shell();
+        let output = shell
+            .sidecar("yt-dlp")
+            .map_err(|e| AppError::SidecarError(format!("فشل إنشاء Sidecar: {}", e)))?
+            .args([
+                "--dump-json",
+                "--no-download",
+                "--no-playlist",
+                "--no-warnings",
+                "--ffmpeg-location", &ffmpeg_location,
+                &url,
+            ])
+            .output()
+            .await
+            .map_err(|e| AppError::SidecarError(format!("فشل تشغيل yt-dlp: {}", e)))?;
+
+        if output.status.code() != Some(0) {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(AppError::SidecarError(format!(
+                "فشل جلب البيانات: {}", stderr
+            )));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let json: serde_json::Value = serde_json::from_str(&stdout)
+            .map_err(|e| AppError::SerializationError(e))?;
+
+        let title = json["title"].as_str().unwrap_or("فيديو").to_string();
+        let duration = json["duration"].as_f64().unwrap_or(0.0);
+        let max_height = json["height"].as_i64().unwrap_or(1080) as i32;
+
+        let mut qualities = Vec::new();
+        let target_heights = [
+            ("360p", 360, 62_500),
+            ("480p", 480, 125_000),
+            ("720p", 720, 312_500),
+            ("1080p", 1080, 625_000),
+            ("2K", 1440, 1_250_000),
+            ("4K", 2160, 2_500_000),
+        ];
+
+        let formats = json["formats"].as_array();
+
+        for (label, height, bps) in target_heights {
+            let mut found_size: Option<i64> = None;
+            if let Some(formats_arr) = formats {
+                let mut best_v_size = 0;
+                let mut best_a_size = 0;
+                for fmt in formats_arr {
+                    let f_height = fmt["height"].as_i64().unwrap_or(0) as i32;
+                    let vcodec = fmt["vcodec"].as_str().unwrap_or("none");
+                    let acodec = fmt["acodec"].as_str().unwrap_or("none");
+                    let size = fmt["filesize"].as_i64()
+                        .or_else(|| fmt["filesize_approx"].as_i64())
+                        .unwrap_or(0);
+
+                    if f_height == height && vcodec != "none" {
+                        if size > best_v_size {
+                            best_v_size = size;
+                        }
+                    }
+                    if vcodec == "none" && acodec != "none" {
+                        if size > best_a_size {
+                            best_a_size = size;
+                        }
+                    }
+                }
+                if best_v_size > 0 {
+                    found_size = Some(best_v_size + best_a_size);
+                }
+            }
+
+            let size_bytes = found_size.unwrap_or_else(|| (duration * bps as f64) as i64);
+
+            qualities.push(QualityInfo {
+                label: label.to_string(),
+                height,
+                size_bytes,
+            });
+        }
+
+        Ok(MediaDetails {
+            title,
+            is_playlist: false,
+            total_duration: duration,
+            max_height,
+            qualities,
+        })
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -214,12 +402,52 @@ pub async fn delete_download(
     queries::delete_download(&state.db_pool, &task_id).await
 }
 
+/// يحذف سجل مجموعة (قائمة تشغيل) وجميع تحميلاتها من قاعدة البيانات.
+/// إذا كانت المجموعة نشطة، يُلغي مهامها أولاً.
+#[tauri::command]
+pub async fn delete_collection(
+    collection_id: String,
+    state: tauri::State<'_, Arc<AppState>>,
+) -> Result<(), AppError> {
+    // 1. إلغاء المهمة النشطة للمجموعة (والتي بدورها تلغي المهام الفرعية عبر Cancellation Token الأب)
+    if let Some(entry) = state.active_tasks.get(&collection_id) {
+        entry.value().cancel();
+    }
+
+    // 2. إلغاء أي مهام فرعية نشطة بشكل منفصل للاحتياط
+    let child_ids: Vec<String> = sqlx::query_scalar("SELECT id FROM downloads WHERE collection_id = ?")
+        .bind(&collection_id)
+        .fetch_all(&state.db_pool)
+        .await?;
+
+    for child_id in child_ids {
+        if let Some(entry) = state.active_tasks.get(&child_id) {
+            entry.value().cancel();
+        }
+    }
+
+    // 3. حذف من قاعدة البيانات
+    queries::delete_collection(&state.db_pool, &collection_id).await
+}
+
 /// يحذف جميع سجلات التحميلات المكتملة من قاعدة البيانات.
 #[tauri::command]
 pub async fn clear_completed_downloads(
     state: tauri::State<'_, Arc<AppState>>,
 ) -> Result<u64, AppError> {
     queries::clear_completed(&state.db_pool).await
+}
+
+/// يلغي جميع التحميلات النشطة ويحذف كافة السجلات من قاعدة البيانات بالكامل.
+#[tauri::command]
+pub async fn clear_all_downloads(
+    state: tauri::State<'_, Arc<AppState>>,
+) -> Result<u64, AppError> {
+    // 1. إلغاء كافة المهام النشطة
+    state.cancel_all();
+
+    // 2. مسح قاعدة البيانات
+    queries::clear_all(&state.db_pool).await
 }
 
 // ═══════════════════════════════════════════════════════════════

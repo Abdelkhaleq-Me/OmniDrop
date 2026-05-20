@@ -16,6 +16,7 @@ pub enum AppError {
     SidecarError(String),
 
     #[error("المحرك (yt-dlp/ffmpeg) مفقود أو لم يتم تثبيته")]
+    #[allow(dead_code)]
     MissingBinary,
 
     #[error("رابط غير صالح أو غير مدعوم: {0}")]

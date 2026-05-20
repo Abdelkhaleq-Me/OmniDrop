@@ -1,0 +1,204 @@
+// src/hooks/useDownloadEngine.ts
+// ═══════════════════════════════════════════════════════════════
+// Hook مركزي لمنطق التحميل: أحداث، polling، إجراءات
+// ═══════════════════════════════════════════════════════════════
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import type {
+  DownloadRecord,
+  CollectionRecord,
+  ProgressData,
+  CompletedData,
+  FailedData,
+  PlaylistStartedData,
+  DownloadOptions,
+} from "../types";
+import type { ShowToastFn } from "./useToast";
+import type { Translations } from "../i18n/translations";
+
+interface UseDownloadEngineReturn {
+  downloads: DownloadRecord[];
+  collections: CollectionRecord[];
+  liveProgress: Record<string, ProgressData>;
+  refreshData: () => Promise<void>;
+  startDownload: (url: string, options: DownloadOptions) => Promise<void>;
+  startPlaylistDownload: (url: string, options: DownloadOptions, selectedIndices?: number[]) => Promise<void>;
+  cancelTask: (taskId: string) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  deleteCollection: (collectionId: string) => Promise<void>;
+  clearAll: () => Promise<void>;
+  clearCompleted: () => Promise<void>;
+}
+
+export function useDownloadEngine(
+  showToast: ShowToastFn,
+  t: Translations
+): UseDownloadEngineReturn {
+  const [downloads, setDownloads] = useState<DownloadRecord[]>([]);
+  const [collections, setCollections] = useState<CollectionRecord[]>([]);
+  const [liveProgress, setLiveProgress] = useState<Record<string, ProgressData>>({});
+
+  // مرجع ثابت لـ t لتجنب إعادة تسجيل listeners عند تغيير اللغة
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  const refreshData = useCallback(async () => {
+    try {
+      const hist = await invoke<DownloadRecord[]>("get_download_history", { limit: 50, offset: 0 });
+      setDownloads(hist);
+      const colList = await invoke<CollectionRecord[]>("get_collection_history");
+      setCollections(colList);
+    } catch (e) {
+      console.error("Error calling DB refresh", e);
+    }
+  }, []);
+
+  // ── تسجيل أحداث Tauri ─────────────────────────────────────
+  useEffect(() => {
+    refreshData();
+
+    const unlistenProgress = listen<ProgressData[]>("downloads-batch-progress", (event) => {
+      const updates = event.payload;
+      setLiveProgress((prev) => {
+        const next = { ...prev };
+        for (const update of updates) {
+          next[update.task_id] = update;
+        }
+        return next;
+      });
+    });
+
+    const unlistenMetadata = listen("download-metadata", () => {
+      refreshData();
+    });
+
+    const unlistenCompleted = listen<CompletedData>("download-completed", (event) => {
+      const data = event.payload;
+      showToast(`${tRef.current.toastCompleted} ${data.title || ""}`, "success");
+      setLiveProgress((prev) => {
+        const next = { ...prev };
+        delete next[data.task_id];
+        return next;
+      });
+      refreshData();
+    });
+
+    const unlistenFailed = listen<FailedData>("download-failed", (event) => {
+      const data = event.payload;
+      showToast(`${tRef.current.toastFailed} ${data.error}`, "error");
+      setLiveProgress((prev) => {
+        const next = { ...prev };
+        delete next[data.task_id];
+        return next;
+      });
+      refreshData();
+    });
+
+    const unlistenCancelled = listen<string>("download-cancelled", (event) => {
+      const taskId = event.payload;
+      showToast(tRef.current.toastCancelled, "info");
+      setLiveProgress((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
+      refreshData();
+    });
+
+    const unlistenPlaylist = listen<PlaylistStartedData>("playlist-started", (event) => {
+      const data = event.payload;
+      showToast(tRef.current.toastPlaylistStarted.replace("{n}", data.total_items.toString()), "success");
+      refreshData();
+    });
+
+    // Polling كل 4 ثوانٍ (تحسين مستقبلي: إيقافه عند عدم وجود مهام نشطة)
+    const interval = setInterval(refreshData, 4000);
+
+    return () => {
+      unlistenProgress.then((f) => f());
+      unlistenMetadata.then((f) => f());
+      unlistenCompleted.then((f) => f());
+      unlistenFailed.then((f) => f());
+      unlistenCancelled.then((f) => f());
+      unlistenPlaylist.then((f) => f());
+      clearInterval(interval);
+    };
+  }, [refreshData, showToast]);
+
+  // ── إجراءات التحميل ────────────────────────────────────────
+
+  const startDownload = useCallback(async (url: string, options: DownloadOptions) => {
+    showToast(tRef.current.toastStarted, "info");
+    await invoke("start_download", { url: url.trim(), options });
+    refreshData();
+  }, [refreshData, showToast]);
+
+  /** تحميل قائمة تشغيل كاملة عبر أمر IPC المخصص */
+  const startPlaylistDownload = useCallback(async (url: string, options: DownloadOptions, selectedIndices?: number[]) => {
+    await invoke("start_playlist_download", { url: url.trim(), options, selectedIndices: selectedIndices || null });
+    refreshData();
+  }, [refreshData]);
+
+  const cancelTask = useCallback(async (taskId: string) => {
+    try {
+      await invoke("cancel_download", { taskId });
+      refreshData();
+    } catch (err: unknown) {
+      showToast(String(err), "error");
+    }
+  }, [refreshData, showToast]);
+
+  const deleteTask = useCallback(async (taskId: string) => {
+    try {
+      await invoke("delete_download", { taskId });
+      refreshData();
+    } catch (err: unknown) {
+      showToast(String(err), "error");
+    }
+  }, [refreshData, showToast]);
+
+  const deleteCollection = useCallback(async (collectionId: string) => {
+    try {
+      await invoke("delete_collection", { collectionId });
+      refreshData();
+    } catch (err: unknown) {
+      showToast(String(err), "error");
+    }
+  }, [refreshData, showToast]);
+
+  const clearAll = useCallback(async () => {
+    try {
+      await invoke("clear_all_downloads");
+      showToast(tRef.current.clearedAll || "Cleared all downloads", "success");
+      refreshData();
+    } catch (err: unknown) {
+      showToast(String(err), "error");
+    }
+  }, [refreshData, showToast]);
+
+  const clearCompleted = useCallback(async () => {
+    try {
+      await invoke("clear_completed_downloads");
+      showToast(tRef.current.clearedCompleted || "Cleared completed downloads", "success");
+      refreshData();
+    } catch (err: unknown) {
+      showToast(String(err), "error");
+    }
+  }, [refreshData, showToast]);
+
+  return {
+    downloads,
+    collections,
+    liveProgress,
+    refreshData,
+    startDownload,
+    startPlaylistDownload,
+    cancelTask,
+    deleteTask,
+    deleteCollection,
+    clearAll,
+    clearCompleted,
+  };
+}
