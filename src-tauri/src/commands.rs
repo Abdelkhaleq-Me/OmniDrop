@@ -39,8 +39,13 @@ fn sanitize_media_info(info: &mut MediaInfo) {
         info.uploader = Some(u.chars().take(200).collect());
     }
     if let Some(ref thumb) = info.thumbnail {
-        if thumb.starts_with("http://") || thumb.starts_with("https://") {
-            info.thumbnail = Some(thumb.chars().take(1024).collect());
+        if let Ok(parsed) = url::Url::parse(thumb) {
+            match parsed.scheme() {
+                "https" | "http" => {
+                    info.thumbnail = Some(thumb.chars().take(1024).collect());
+                }
+                _ => info.thumbnail = None,
+            }
         } else {
             info.thumbnail = None;
         }
