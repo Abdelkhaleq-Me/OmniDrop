@@ -37,7 +37,7 @@ export function OptionsDrawer({
   const { t } = useLang();
 
   return (
-    <div className={`op ${isOpen ? "open" : ""}`}>
+    <div className={`options-panel ${isOpen ? "open" : ""}`}>
       <div className="option-item">
         {/* Mode Selection */}
         <div className="options-row">
