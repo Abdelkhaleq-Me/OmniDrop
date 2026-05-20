@@ -34,10 +34,6 @@ export function HistoryTab({
 
   // Filter history records
   const filteredHistory = downloads.filter((item) => {
-    const isHistoryStatus =
-      item.status === "completed" || item.status === "failed" || item.status === "cancelled";
-    if (!isHistoryStatus) return false;
-
     if (historyFilter !== "all" && item.status !== historyFilter) return false;
 
     if (historySearch.trim()) {

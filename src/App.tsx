@@ -22,7 +22,7 @@ import { QueueGrid } from "./components/queue/QueueGrid";
 import { HistoryTab } from "./components/HistoryTab";
 import { PlaylistModal } from "./components/PlaylistModal";
 
-import { detectLinkType } from "./utils/format";
+import { detectLinkType, parseSpeedToBytes, formatSpeed } from "./utils/format";
 import type { DownloadOptions } from "./types";
 import "./App.css";
 
@@ -68,6 +68,7 @@ function App() {
   const {
     isOpen: isModalOpen,
     isLoading: isLoadingPlaylist,
+    isSubmitting: isSubmittingPlaylist,
     videos: playlistVideos,
     selectedIds: selectedPlaylistIds,
     search: playlistSearch,
@@ -169,18 +170,26 @@ function App() {
   const cancelledCount = downloads.filter((d) => d.status === "cancelled").length;
   const failedCount = downloads.filter((d) => d.status === "failed").length;
 
-  let currentSpeed = "0.0 MB/s";
+  let totalSpeedBytes = 0;
   Object.values(liveProgress).forEach((prog) => {
-    if (prog.speed && prog.status === "downloading") {
-      currentSpeed = prog.speed;
+    if (prog.status === "downloading" && prog.speed) {
+      totalSpeedBytes += parseSpeedToBytes(prog.speed);
     }
   });
+  const currentSpeed = formatSpeed(totalSpeedBytes);
 
   // تصفية المهام المعروضة في قائمة الانتظار الحالية (المهام غير المؤرشفة النشطة/قيد المعالجة)
   const activeQueueItems = downloads.filter((item) => {
+    const liveStatus = liveProgress[item.id]?.status || item.status;
     const isHistoryStatus =
-      item.status === "completed" || item.status === "failed" || item.status === "cancelled";
+      liveStatus === "completed" || liveStatus === "failed" || liveStatus === "cancelled";
     return !isHistoryStatus;
+  });
+
+  // تصفية مهام الأرشيف والسجل التاريخي الممررة
+  const historyItems = downloads.filter((item) => {
+    const liveStatus = liveProgress[item.id]?.status || item.status;
+    return liveStatus === "completed" || liveStatus === "failed" || liveStatus === "cancelled";
   });
 
   return (
@@ -290,7 +299,7 @@ function App() {
           {/* تبويب الأرشيف والسجل التاريخي */}
           {activeTab === "history" && (
             <HistoryTab
-              downloads={downloads}
+              downloads={historyItems}
               onClearCompleted={clearCompleted}
               onDeleteTask={deleteTask}
               showToast={showToast}
@@ -314,6 +323,7 @@ function App() {
       <PlaylistModal
         isOpen={isModalOpen}
         isLoading={isLoadingPlaylist}
+        isSubmitting={isSubmittingPlaylist}
         videos={playlistVideos}
         selectedIds={selectedPlaylistIds}
         search={playlistSearch}

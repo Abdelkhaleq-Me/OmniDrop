@@ -45,15 +45,15 @@ export const detectLinkType = (val: string): "video" | "playlist" | "unknown" | 
   if (!val || !val.trim()) return null;
   const trimmed = val.trim();
 
-  // الأولوية للفيديو المفرد
-  const isSingleVideo = /watch\?v=/i.test(trimmed) || /youtu\.be\//i.test(trimmed) ||
+  // الأولوية للفيديو المفرد (الرابط الذي يحتوي على watch?v= أو youtu.be/ يُعامل كفيديو فردي حتى لو احتوى على list=)
+  const hasSingleVideoMarker = /watch\?v=/i.test(trimmed) || /youtu\.be\//i.test(trimmed);
+  const isPlaylist = (/list=/i.test(trimmed) || /playlist/i.test(trimmed) || /\/sets\//i.test(trimmed)) && !hasSingleVideoMarker;
+  if (isPlaylist) return "playlist";
+
+  const isSingleVideo = hasSingleVideoMarker ||
     /tiktok\.com/i.test(trimmed) || /instagram\.com/i.test(trimmed) ||
     /twitter\.com/i.test(trimmed) || /x\.com/i.test(trimmed);
   if (isSingleVideo) return "video";
-
-  // قوائم التشغيل
-  const isPlaylist = /list=/i.test(trimmed) || /playlist/i.test(trimmed) || /\/sets\//i.test(trimmed);
-  if (isPlaylist) return "playlist";
 
   // منصات عامة
   const isGeneralVideoPlatform = /youtu|tiktok|instagram|twitter|x\.com/i.test(trimmed);
@@ -61,3 +61,27 @@ export const detectLinkType = (val: string): "video" | "playlist" | "unknown" | 
 
   return "unknown";
 };
+
+/** تحويل نص السرعة (بما في ذلك وحدات IEC و SI) إلى رقم بالبايت في الثانية */
+export function parseSpeedToBytes(speed: string): number {
+  if (!speed) return 0;
+  const match = speed.match(/([\d.]+)\s*(GiB|MiB|KiB|GB|MB|KB)\/s/i);
+  if (!match) return 0;
+  const value = parseFloat(match[1]);
+  const unit = match[2].toLowerCase();
+  const multipliers: Record<string, number> = {
+    'gib': 1024**3, 'mib': 1024**2, 'kib': 1024,
+    'gb': 1000**3,  'mb': 1000**2,  'kb': 1000,
+  };
+  return value * (multipliers[unit] || 0);
+}
+
+/** تنسيق السرعة الرقمية بالبايت في الثانية إلى وحدة مقروءة مناسبة (MB/s) */
+export function formatSpeed(bytesPerSec: number): string {
+  if (bytesPerSec <= 0) return "0.0 MB/s";
+  const mb = bytesPerSec / (1024 * 1024);
+  if (mb >= 1024) {
+    return `${(mb / 1024).toFixed(1)} GB/s`;
+  }
+  return `${mb.toFixed(1)} MB/s`;
+}

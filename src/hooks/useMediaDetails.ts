@@ -35,11 +35,15 @@ export function useMediaDetails(
       return;
     }
 
+    let active = true;
+
     const delayDebounce = setTimeout(async () => {
+      if (!active) return;
       setIsPrefetching(true);
       setMediaDetails(null);
       try {
         const details = await invoke<MediaDetails>("fetch_media_details", { url: url.trim() });
+        if (!active) return;
         setMediaDetails(details);
 
         // تعديل تلقائي للجودة إذا كانت غير مدعومة
@@ -55,13 +59,20 @@ export function useMediaDetails(
           }
         }
       } catch (err) {
-        console.error("Failed to prefetch media details:", err);
+        if (active) {
+          console.error("Failed to prefetch media details:", err);
+        }
       } finally {
-        setIsPrefetching(false);
+        if (active) {
+          setIsPrefetching(false);
+        }
       }
     }, 600);
 
-    return () => clearTimeout(delayDebounce);
+    return () => {
+      active = false;
+      clearTimeout(delayDebounce);
+    };
   }, [url]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   /** حساب الحجم المقدّر للجودة المحددة حالياً */

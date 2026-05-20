@@ -219,7 +219,9 @@ pub async fn fetch_media_details(
     let url = url.trim().to_string();
     validate_url(&url)?;
 
-    let is_playlist_link = url.contains("list=") || url.contains("playlist") || url.contains("/sets/");
+    let has_single_video_marker = url.contains("watch?v=") || url.contains("youtu.be/");
+    let is_playlist_link = (url.contains("list=") || url.contains("playlist") || url.contains("/sets/"))
+        && !has_single_video_marker;
 
     if is_playlist_link {
         // جلب بيانات قائمة التشغيل

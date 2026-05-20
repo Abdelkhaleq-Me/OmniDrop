@@ -13,6 +13,7 @@ import { formatDuration } from "../utils/format";
 interface UsePlaylistModalReturn {
   isOpen: boolean;
   isLoading: boolean;
+  isSubmitting: boolean;
   videos: PlaylistVideoItem[];
   selectedIds: Set<number>;
   search: string;
@@ -35,6 +36,7 @@ export function usePlaylistModal(
 ): UsePlaylistModalReturn {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [videos, setVideos] = useState<PlaylistVideoItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
@@ -84,12 +86,12 @@ export function usePlaylistModal(
     onDone: () => void,
     startPlaylistDownload: (url: string, options: DownloadOptions, selectedIndices?: number[]) => Promise<void>,
   ) => {
-    setIsOpen(false);
-
     if (selectedIds.size === 0) {
       showToast(tRef.current.selectAtLeastOne, "error");
       return;
     }
+
+    setIsSubmitting(true);
 
     showToast(
       tRef.current.startingSelectedDownload.replace("{n}", selectedIds.size.toString()),
@@ -100,10 +102,13 @@ export function usePlaylistModal(
       // ═══ إصلاح: استخدام start_playlist_download بدلاً من إرسال فيديوهات فردية ═══
       const indices = Array.from(selectedIds);
       await startPlaylistDownload(url, options, indices);
+      setIsOpen(false);
       onDone();
     } catch (err) {
       console.error("Failed to start playlist download:", err);
       showToast(String(err), "error");
+    } finally {
+      setIsSubmitting(false);
     }
   }, [selectedIds, showToast]);
 
@@ -128,6 +133,7 @@ export function usePlaylistModal(
   return {
     isOpen,
     isLoading,
+    isSubmitting,
     videos,
     selectedIds,
     search,

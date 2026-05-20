@@ -126,7 +126,14 @@ export function QueueGrid({
               <div className="gm">
                 <span className="gta">{item.quality || "Original"}</span>
                 <span className="gta" style={{ color: leftStripColor }}>
-                  {live?.speed || formatBytes(item.file_size)}
+                  {live?.speed ? (
+                    <>
+                      {live.speed}
+                      {item.file_size ? ` · ${formatBytes(item.file_size)}` : ""}
+                    </>
+                  ) : (
+                    formatBytes(item.file_size)
+                  )}
                 </span>
               </div>
               <div className="gm">

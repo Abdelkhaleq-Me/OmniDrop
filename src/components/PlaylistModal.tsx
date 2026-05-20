@@ -9,6 +9,7 @@ import type { PlaylistVideoItem } from "../types";
 interface PlaylistModalProps {
   isOpen: boolean;
   isLoading: boolean;
+  isSubmitting?: boolean;
   videos: PlaylistVideoItem[];
   selectedIds: Set<number>;
   search: string;
@@ -22,6 +23,7 @@ interface PlaylistModalProps {
 export function PlaylistModal({
   isOpen,
   isLoading,
+  isSubmitting = false,
   videos,
   selectedIds,
   search,
@@ -46,7 +48,11 @@ export function PlaylistModal({
           <div className="mhl">
             <span className="mht">{t.modalTitle}</span>
             <span className="mhs">
-              {isLoading
+              {isSubmitting
+                ? lang === "ar"
+                  ? "جاري إعداد وإرسال طلب التحميل..."
+                  : "Preparing and starting download..."
+                : isLoading
                 ? lang === "ar"
                   ? "جاري قراءة البيانات..."
                   : "Loading metadata..."
@@ -57,11 +63,16 @@ export function PlaylistModal({
             <button
               className="msa"
               onClick={onSelectAll}
-              disabled={isLoading || videos.length === 0}
+              disabled={isLoading || isSubmitting || videos.length === 0}
             >
               {selectedIds.size === videos.length ? t.deselectAll : t.selectAll}
             </button>
-            <button className="mcl" onClick={onClose} aria-label={lang === "ar" ? "إغلاق" : "Close"}>
+            <button
+              className="mcl"
+              onClick={onClose}
+              disabled={isSubmitting}
+              aria-label={lang === "ar" ? "إغلاق" : "Close"}
+            >
               <i className="ti ti-x"></i>
             </button>
           </div>
@@ -137,16 +148,25 @@ export function PlaylistModal({
         )}
 
         <div className="mft">
-          <button className="mcc" onClick={onClose}>
+          <button className="mcc" onClick={onClose} disabled={isSubmitting}>
             {t.cancelModal}
           </button>
           <button
             className="mdb"
             onClick={onConfirmDownload}
-            disabled={isLoading || selectedIds.size === 0}
+            disabled={isLoading || isSubmitting || selectedIds.size === 0}
           >
-            <i className="ti ti-arrow-bar-to-down"></i>
-            {t.downloadModal.replace("{n}", selectedIds.size.toString())}
+            {isSubmitting ? (
+              <>
+                <i className="ti ti-loader spin"></i>
+                <span>{lang === "ar" ? "جاري البدء..." : "Starting..."}</span>
+              </>
+            ) : (
+              <>
+                <i className="ti ti-arrow-bar-to-down"></i>
+                <span>{t.downloadModal.replace("{n}", selectedIds.size.toString())}</span>
+              </>
+            )}
           </button>
         </div>
       </div>
