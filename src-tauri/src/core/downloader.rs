@@ -56,8 +56,13 @@ pub async fn run_download(
     metadata: Option<MediaInfo>,
 ) {
     // ── المرحلة 1: الحصول على تصريح من الـ Semaphore ─────────
+    let semaphore = {
+        let sem_guard = state.download_semaphore.read().await;
+        sem_guard.clone()
+    };
+
     let _permit = tokio::select! {
-        result = state.download_semaphore.acquire() => {
+        result = semaphore.acquire() => {
             match result {
                 Ok(permit) => permit,
                 Err(_) => {
@@ -103,7 +108,10 @@ pub async fn run_download(
             file_size,
         ).await;
 
-        let _ = app_handle.emit("download-metadata", &info);
+        let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataPayload {
+            task_id: task_id.clone(),
+            info: info.clone(),
+        });
         Some(info)
     } else if skip_prefetch {
         None
@@ -132,7 +140,10 @@ pub async fn run_download(
                     file_size,
                 ).await;
 
-                let _ = app_handle.emit("download-metadata", &info);
+                let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataPayload {
+                    task_id: task_id.clone(),
+                    info: info.clone(),
+                });
                 Some(info)
             }
             Err(e) => {
@@ -282,7 +293,15 @@ pub async fn run_playlist_download(
         let video_url = match &entry.url {
             Some(u) if !u.is_empty() => u.clone(),
             _ => match &entry.id {
-                Some(id) => format!("https://www.youtube.com/watch?v={}", id),
+                Some(id) => {
+                    if platform == "youtube" {
+                        format!("https://www.youtube.com/watch?v={}", id)
+                    } else if platform == "vimeo" {
+                        format!("https://vimeo.com/{}", id)
+                    } else {
+                        id.clone()
+                    }
+                }
                 None => continue, // تخطي العناصر بدون رابط
             },
         };
@@ -322,14 +341,14 @@ pub async fn run_playlist_download(
     }
 
     // ── المرحلة 5: إبلاغ الواجهة ─────────────────────────────
+    let _ = queries::update_collection_status(&state.db_pool, &collection_id, "downloading").await;
+
     let _ = app_handle.emit("playlist-started", PlaylistStartedData {
         collection_id: collection_id.clone(),
         title: playlist_info.title,
         total_items,
         task_ids,
     });
-
-    let _ = queries::update_collection_status(&state.db_pool, &collection_id, "downloading").await;
 
     // مراقبة انتهاء جميع التحميلات الفرعية وتنظيف Token المجموعة بشكل غير متزامن مع دعم الإغلاق الفوري
     let state_clone = Arc::clone(&state);
@@ -465,6 +484,7 @@ async fn spawn_ytdlp(
         "--newline".to_string(),
         "--no-playlist".to_string(),
         "--no-warnings".to_string(),
+        "--restrict-filenames".to_string(),
         // قالب JSON للتقدم
         "--progress-template".to_string(),
         r#"{"progress":"%(progress._percent_str)s","speed":"%(progress._speed_str)s","eta":"%(progress._eta_str)s"}"#.to_string(),
@@ -585,7 +605,7 @@ async fn process_event_stream(
         match event {
             CommandEvent::Stdout(line_bytes) => {
                 stdout_buffer.extend_from_slice(&line_bytes);
-                while let Some(pos) = stdout_buffer.iter().position(|&b| b == b'\n') {
+                while let Some(pos) = stdout_buffer.iter().position(|&b| b == b'\n' || b == b'\r') {
                     let line_bytes = stdout_buffer.drain(..=pos).collect::<Vec<u8>>();
                     let line = String::from_utf8_lossy(&line_bytes);
                     let line = line.trim();
@@ -612,7 +632,10 @@ async fn process_event_stream(
                                 file_size,
                             ).await;
 
-                            let _ = app_handle.emit("download-metadata", &info);
+                            let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataPayload {
+                                task_id: task_id.to_string(),
+                                info: info.clone(),
+                            });
                         }
                     }
 

@@ -3,7 +3,7 @@
 // Hook لجلب البيانات الوصفية مسبقاً مع debounce + تقدير الأحجام
 // ═══════════════════════════════════════════════════════════════
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { MediaDetails } from "../types";
 import { isQualitySupported, formatBytes, detectLinkType } from "../utils/format";
@@ -21,6 +21,11 @@ export function useMediaDetails(
 ): UseMediaDetailsReturn {
   const [mediaDetails, setMediaDetails] = useState<MediaDetails | null>(null);
   const [isPrefetching, setIsPrefetching] = useState(false);
+  const qualityRef = useRef(quality);
+
+  useEffect(() => {
+    qualityRef.current = quality;
+  }, [quality]);
 
   // Debounced prefetch عند تغيير الرابط
   useEffect(() => {
@@ -47,8 +52,8 @@ export function useMediaDetails(
         setMediaDetails(details);
 
         // تعديل تلقائي للجودة إذا كانت غير مدعومة
-        if (!details.is_playlist && details.max_height > 0) {
-          const currentHeight = parseInt(quality, 10);
+        if (!details.is_playlist && details.max_height > 0 && qualityRef.current !== "best") {
+          const currentHeight = parseInt(qualityRef.current, 10);
           if (!isQualitySupported(currentHeight, details.max_height)) {
             const targetHeights = [360, 480, 720, 1080, 1440, 2160];
             const supported = targetHeights.filter(h => isQualitySupported(h, details.max_height));
@@ -68,16 +73,23 @@ export function useMediaDetails(
         }
       }
     }, 600);
-
     return () => {
       active = false;
       clearTimeout(delayDebounce);
     };
-  }, [url]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [url, setQuality]);
 
   /** حساب الحجم المقدّر للجودة المحددة حالياً */
   const getSelectedQualitySize = (): string | null => {
-    if (!mediaDetails || !mediaDetails.qualities) return null;
+    if (!mediaDetails || !mediaDetails.qualities || mediaDetails.qualities.length === 0) return null;
+    
+    if (quality === "best") {
+      const best = mediaDetails.qualities.reduce((prev, current) => {
+        return (current.size_bytes || 0) > (prev.size_bytes || 0) ? current : prev;
+      });
+      return best.size_bytes ? formatBytes(best.size_bytes) : null;
+    }
+
     const currentHeight = parseInt(quality, 10);
     const qInfo = mediaDetails.qualities.find(q => q.height === currentHeight);
     if (qInfo && qInfo.size_bytes) {

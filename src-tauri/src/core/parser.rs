@@ -143,6 +143,12 @@ pub struct MediaInfo {
     pub filesize_approx: Option<i64>,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct MetadataPayload {
+    pub task_id: String,
+    pub info: MediaInfo,
+}
+
 /// بيانات اكتمال التحميل — تُرسل عند انتهاء التحميل بنجاح
 #[derive(Debug, Serialize, Clone)]
 pub struct CompletedData {

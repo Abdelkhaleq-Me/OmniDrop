@@ -6,7 +6,7 @@
 import { openFileFolder } from "../../utils/opener";
 import { useLang } from "../../i18n/LangContext";
 import type { DownloadRecord, ProgressData } from "../../types";
-import { formatDuration, formatBytes } from "../../utils/format";
+import { formatDuration, formatBytes, getLeftStripColor, getStatusTranslation } from "../../utils/format";
 
 interface QueueListProps {
   downloads: DownloadRecord[];
@@ -30,32 +30,21 @@ export function QueueList({
   };
 
   return (
-    <div className="lv">
+    <div className="list-view">
       {downloads.map((item) => {
         const live = liveProgress[item.id];
         const currentStatus = live?.status || item.status;
         const percentVal = live?.percent || (currentStatus === "completed" ? "100%" : "0%");
         const numericPercent = parseFloat(percentVal.replace("%", "")) || 0;
 
-        let leftStripColor = "var(--s-pend)";
-        if (currentStatus === "downloading" || currentStatus === "fetching_metadata") {
-          leftStripColor = "var(--s-dl)";
-        } else if (currentStatus === "processing") {
-          leftStripColor = "var(--s-proc)";
-        } else if (currentStatus === "completed") {
-          leftStripColor = "var(--s-done)";
-        } else if (currentStatus === "cancelled") {
-          leftStripColor = "var(--s-cancel)";
-        } else if (currentStatus === "failed") {
-          leftStripColor = "var(--s-fail)";
-        }
+        const leftStripColor = getLeftStripColor(currentStatus);
 
         return (
-          <div className="li" key={item.id}>
-            <div className="lac" style={{ background: leftStripColor }}></div>
-            <div className="lt">
+          <div className="list-item" key={item.id}>
+            <div className="list-accent" style={{ background: leftStripColor }}></div>
+            <div className="list-thumb">
               {/* Thumbnail / Icon */}
-              <div className="lth">
+              <div className="list-thumbnail-img">
                 {item.thumbnail_url ? (
                   <img
                     src={item.thumbnail_url}
@@ -63,25 +52,25 @@ export function QueueList({
                     onError={(e) => (e.currentTarget.style.display = "none")}
                   />
                 ) : (
-                  <i className="lth-ic ti ti-brand-youtube"></i>
+                  <i className="list-thumb-icon ti ti-brand-youtube"></i>
                 )}
                 {item.duration && (
-                  <div className="tbd">{formatDuration(item.duration)}</div>
+                  <div className="time-badge">{formatDuration(item.duration)}</div>
                 )}
               </div>
 
               {/* Details */}
-              <div className="linf">
-                <div className="ltit" title={item.title || item.url}>
+              <div className="list-info">
+                <div className="list-title" title={item.title || item.url}>
                   {item.title || item.url}
                 </div>
-                <div className="lsub">
+                <div className="list-subtitle">
                   {currentStatus === "downloading" && (
-                    <div className="sd pulse" style={{ background: "var(--s-dl)" }}></div>
+                    <div className="status-dot pulse" style={{ background: "var(--s-dl)" }}></div>
                   )}
                   {currentStatus === "processing" && (
                     <div
-                      className="sd spin"
+                      className="status-dot spin"
                       style={{
                         width: 5,
                         height: 5,
@@ -92,25 +81,25 @@ export function QueueList({
                     ></div>
                   )}
                   {currentStatus !== "downloading" && currentStatus !== "processing" && (
-                    <div className="sd" style={{ background: leftStripColor }}></div>
+                    <div className="status-dot" style={{ background: leftStripColor }}></div>
                   )}
 
-                  <span className="stg" style={{ color: leftStripColor }}>
-                    {t[currentStatus as keyof typeof t] || currentStatus}
+                  <span className="status-tag" style={{ color: leftStripColor }}>
+                    {getStatusTranslation(t, currentStatus)}
                   </span>
-                  <span className="dot">·</span>
-                  <span className="stg">
+                  <span className="dot-separator">·</span>
+                  <span className="status-tag">
                     {item.quality || "Original"} · {formatBytes(item.file_size)}
                   </span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="lax">
+              <div className="list-actions">
                 {/* Open finished files */}
                 {currentStatus === "completed" && item.file_path && (
                   <button
-                    className="iab"
+                    className="item-action-btn"
                     title={t.openFolder}
                     onClick={() => handleOpenFolder(item.file_path!)}
                   >
@@ -123,7 +112,7 @@ export function QueueList({
                   currentStatus === "fetching_metadata" ||
                   currentStatus === "pending") && (
                   <button
-                    className="iab dl"
+                    className="item-action-btn dl"
                     onClick={() => onCancelTask(item.id)}
                     title={t.cancelModal}
                   >
@@ -131,12 +120,12 @@ export function QueueList({
                   </button>
                 )}
 
-                {/* Delete old or retry */}
+                {/* Delete old options-row retry */}
                 {(currentStatus === "completed" ||
                   currentStatus === "failed" ||
                   currentStatus === "cancelled") && (
                   <button
-                    className="iab dl"
+                    className="item-action-btn dl"
                     onClick={() => onDeleteTask(item.id)}
                     title={t.deleteRecord}
                   >
@@ -147,18 +136,18 @@ export function QueueList({
             </div>
 
             {/* Progress bar info */}
-            <div className="pw">
-              <div className="pt">
+            <div className="progress-wrapper">
+              <div className="progress-track">
                 <div
-                  className="pf"
+                  className="progress-fill"
                   style={{ width: `${numericPercent}%`, background: leftStripColor }}
                 ></div>
               </div>
-              <div className="pl">
-                <span className="plb" style={{ color: leftStripColor }}>
+              <div className="progress-label">
+                <span className="progress-label-bar" style={{ color: leftStripColor }}>
                   {percentVal} {live?.speed ? `· ${live.speed}` : ""}
                 </span>
-                <span className="plb">
+                <span className="progress-label-bar">
                   {live?.eta ? `${t.etaLabel} ${live.eta}` : ""}
                 </span>
               </div>

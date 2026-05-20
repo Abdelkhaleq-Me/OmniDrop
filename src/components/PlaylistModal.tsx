@@ -44,10 +44,10 @@ export function PlaylistModal({
   return (
     <div className="modal-overlay">
       <div className="modal">
-        <div className="mhd">
-          <div className="mhl">
-            <span className="mht">{t.modalTitle}</span>
-            <span className="mhs">
+        <div className="modal-header">
+          <div className="modal-header-labels">
+            <span className="modal-header-title">{t.modalTitle}</span>
+            <span className="modal-header-subtitle">
               {isSubmitting
                 ? lang === "ar"
                   ? "جاري إعداد وإرسال طلب التحميل..."
@@ -59,16 +59,16 @@ export function PlaylistModal({
                 : t.modalSub.replace("{n}", videos.length.toString())}
             </span>
           </div>
-          <div className="mhac">
+          <div className="modal-header-actions">
             <button
-              className="msa"
+              className="modal-select-all-btn"
               onClick={onSelectAll}
               disabled={isLoading || isSubmitting || videos.length === 0}
             >
               {selectedIds.size === videos.length ? t.deselectAll : t.selectAll}
             </button>
             <button
-              className="mcl"
+              className="modal-close-btn"
               onClick={onClose}
               disabled={isSubmitting}
               aria-label={lang === "ar" ? "إغلاق" : "Close"}
@@ -89,19 +89,19 @@ export function PlaylistModal({
           </div>
         ) : (
           <>
-            <div className="mfi">
+            <div className="modal-filter-bar">
               <input
-                className="mfin"
+                className="modal-filter-input"
                 placeholder={t.searchPlaylist}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <span className="msc">
+              <span className="modal-selected-count">
                 {t.selectedCount.replace("{n}", selectedIds.size.toString())}
               </span>
             </div>
 
-            <div className="ml">
+            <div className="modal-list">
               {filteredVideos.length === 0 ? (
                 <div className="no-items" style={{ padding: "40px 20px" }}>
                   <i className="ti ti-video-off" style={{ fontSize: 24, opacity: 0.5 }}></i>
@@ -115,13 +115,13 @@ export function PlaylistModal({
                   return (
                     <div
                       key={video.id}
-                      className={`mi ${isSel ? "sel" : ""}`}
+                      className={`modal-item ${isSel ? "sel" : ""}`}
                       onClick={() => onToggleItem(video.id)}
                     >
-                      <div className="mcb">
+                      <div className="modal-checkbox">
                         <i className="ti ti-check"></i>
                       </div>
-                      <div className="mith">
+                      <div className="modal-item-thumb">
                         {video.videoId ? (
                           <img
                             src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
@@ -134,11 +134,11 @@ export function PlaylistModal({
                           </div>
                         )}
                       </div>
-                      <div className="miinf">
-                        <div className="mitit">{video.title}</div>
-                        <div className="misub">{video.channel}</div>
+                      <div className="modal-item-info">
+                        <div className="modal-item-title">{video.title}</div>
+                        <div className="modal-item-subtitle">{video.channel}</div>
                       </div>
-                      <div className="midr">{video.duration}</div>
+                      <div className="modal-item-duration">{video.duration}</div>
                     </div>
                   );
                 })
@@ -147,12 +147,12 @@ export function PlaylistModal({
           </>
         )}
 
-        <div className="mft">
-          <button className="mcc" onClick={onClose} disabled={isSubmitting}>
+        <div className="modal-footer">
+          <button className="modal-cancel-btn" onClick={onClose} disabled={isSubmitting}>
             {t.cancelModal}
           </button>
           <button
-            className="mdb"
+            className="modal-download-btn"
             onClick={onConfirmDownload}
             disabled={isLoading || isSubmitting || selectedIds.size === 0}
           >

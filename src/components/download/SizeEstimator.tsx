@@ -26,13 +26,13 @@ export function SizeEstimator({
       {isPrefetching ? (
         <>
           <div className="mini-spinner"></div>
-          <span className="stxt">{t.fetchingDetails}</span>
+          <span className="status-text">{t.fetchingDetails}</span>
         </>
       ) : (
         mediaDetails && (
           <>
-            <i className="ti ti-database sico" style={{ color: "var(--bl)" }}></i>
-            <span className="stxt">
+            <i className="ti ti-database status-icon" style={{ color: "var(--bl)" }}></i>
+            <span className="status-text">
               {mediaDetails.is_playlist ? t.estimatedPlaylistSize : t.estimatedVideoSize}
               <strong style={{ color: "var(--bl)", marginLeft: "4px" }}>
                 {getSelectedQualitySize() || "—"}

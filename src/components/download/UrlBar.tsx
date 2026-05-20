@@ -46,10 +46,10 @@ export function UrlBar({
   };
 
   const tbadgeTypeClass =
-    badgeType === "video" ? "vid" : badgeType === "playlist" ? "pl" : "err";
+    badgeType === "video" ? "vid" : badgeType === "playlist" ? "progress-label" : "err";
 
   return (
-    <div className="ur">
+    <div className="url-row">
       {/* 1. Link icon */}
       <i className="ti ti-link uico" aria-hidden="true"></i>
 
@@ -89,13 +89,13 @@ export function UrlBar({
 
       {/* 4. Clear button (if URL is set) */}
       {url && (
-        <button className="pbtn" onClick={handleClear} aria-label={lang === "ar" ? "مسح" : "Clear"} style={{ marginInlineEnd: '4px' }}>
+        <button className="paste-btn" onClick={handleClear} aria-label={lang === "ar" ? "مسح" : "Clear"} style={{ marginInlineEnd: '4px' }}>
           <i className="ti ti-x"></i>
         </button>
       )}
 
       {/* 5. Paste button */}
-      <button className="pbtn" onClick={onPaste} title={t.pasteBtn} aria-label={t.pasteBtn}>
+      <button className="paste-btn" onClick={onPaste} title={t.pasteBtn} aria-label={t.pasteBtn}>
         <i className="ti ti-clipboard"></i>
       </button>
 
@@ -111,7 +111,7 @@ export function UrlBar({
       </button>
 
       {/* 7. Download button */}
-      <button className="dlb" onClick={onDownload} disabled={!url.trim()} aria-label={t.downloadBtn}>
+      <button className="download-button" onClick={onDownload} disabled={!url.trim()} aria-label={t.downloadBtn}>
         <i className="ti ti-arrow-bar-to-down"></i>
         {t.downloadBtn}
       </button>

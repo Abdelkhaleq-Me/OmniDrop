@@ -38,9 +38,9 @@ export function OptionsDrawer({
 
   return (
     <div className={`op ${isOpen ? "open" : ""}`}>
-      <div className="oi">
+      <div className="option-item">
         {/* Mode Selection */}
-        <div className="or">
+        <div className="options-row">
           <span className="ol">{t.modeLabel}</span>
           <button
             className={`chip ${mode === "video" ? "ac" : ""}`}
@@ -71,9 +71,9 @@ export function OptionsDrawer({
         {mode === "audio" && <AudioFormatSelector afmt={afmt} setAfmt={setAfmt} />}
 
         {/* Dynamic Description Strip */}
-        <div className="sbar">
-          <i className="ti ti-info-circle sico"></i>
-          <span className="stxt">
+        <div className="status-bar">
+          <i className="ti ti-info-circle status-icon"></i>
+          <span className="status-text">
             {mode === "video" ? (
               <>
                 {t.singleInfoPre}

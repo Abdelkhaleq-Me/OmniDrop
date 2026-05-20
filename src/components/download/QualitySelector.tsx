@@ -18,7 +18,7 @@ export function QualitySelector({ quality, setQuality, mediaDetails }: QualitySe
   const qualities = ["2160", "1440", "1080", "720", "480", "360"];
 
   return (
-    <div className="or">
+    <div className="options-row">
       <span className="ol">{t.quality}</span>
       {qualities.map((q) => {
         const height = parseInt(q, 10);

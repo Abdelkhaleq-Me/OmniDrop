@@ -102,8 +102,45 @@ async fn main() {
 
                 println!("✅ قاعدة البيانات جاهزة ومحسنة في: {}", db_file_path.display());
 
-                // إنشاء الحالة المركزية: DB + AppHandle + 3 تحميلات متزامنة كحد أقصى
-                let app_state = Arc::new(AppState::new(pool, handle.clone(), 3));
+                // استرجاع الإعدادات من قاعدة البيانات أو استخدام القيم الافتراضية
+                let default_download_path = crate::db::queries::get_setting(&pool, "default_download_path")
+                    .await
+                    .unwrap_or_default()
+                    .unwrap_or_else(|| {
+                        dirs::download_dir()
+                            .or_else(|| std::env::current_dir().ok())
+                            .unwrap_or_else(|| std::path::PathBuf::from("."))
+                            .to_string_lossy()
+                            .to_string()
+                    });
+
+                let max_concurrent_downloads: usize = crate::db::queries::get_setting(&pool, "max_concurrent_downloads")
+                    .await
+                    .unwrap_or_default()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(3);
+
+                let concurrent_fragments: u8 = crate::db::queries::get_setting(&pool, "concurrent_fragments")
+                    .await
+                    .unwrap_or_default()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(4);
+
+                let http_chunk_size_mb: u8 = crate::db::queries::get_setting(&pool, "http_chunk_size_mb")
+                    .await
+                    .unwrap_or_default()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(10);
+
+                let config = crate::state::AppConfig {
+                    default_download_path: std::path::PathBuf::from(default_download_path),
+                    max_concurrent_downloads,
+                    concurrent_fragments,
+                    http_chunk_size_mb,
+                };
+
+                // إنشاء الحالة المركزية: DB + AppHandle + الإعدادات المحملة
+                let app_state = Arc::new(AppState::new(pool, handle.clone(), config));
 
                 // تسجيل الحالة في Tauri State Manager
                 handle.manage(app_state.clone());
@@ -171,12 +208,27 @@ async fn main() {
             commands::clear_all_downloads,
             commands::fetch_playlist_info,
             commands::fetch_media_details,
+            commands::get_config,
+            commands::update_config,
+            commands::select_directory,
+            commands::get_db_stats,
         ])
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if let Some(state) = window.try_state::<Arc<AppState>>() {
+                    api.prevent_close(); // نمنع الإغلاق الفوري لضمان اكتمال الاستعلام
+                    
                     state.shutdown_token.cancel();
                     state.cancel_all();
+                    
+                    let pool = state.db_pool.clone();
+                    let window_clone = window.clone();
+                    
+                    tauri::async_runtime::spawn(async move {
+                        // تحويل جميع المهام النشطة إلى cancelled في قاعدة البيانات لتفادي التعليق عند التشغيل القادم
+                        let _ = crate::db::queries::cancel_all_active_in_db(&pool).await;
+                        window_clone.destroy().unwrap();
+                    });
                 }
             }
         })

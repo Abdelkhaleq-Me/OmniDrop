@@ -60,6 +60,10 @@ export function useDownloadEngine(
   useEffect(() => {
     refreshData();
 
+    const unlistenAppReady = listen("app-ready", () => {
+      refreshData();
+    });
+
     const unlistenProgress = listen<ProgressData[]>("downloads-batch-progress", (event) => {
       const updates = event.payload;
       setLiveProgress((prev) => {
@@ -71,8 +75,22 @@ export function useDownloadEngine(
       });
     });
 
-    const unlistenMetadata = listen("download-metadata", () => {
-      refreshData();
+    const unlistenMetadata = listen<{ task_id: string, info: MediaInfo }>("download-metadata", (event) => {
+      const payload = event.payload;
+      setDownloads((prev) => 
+        prev.map(d => 
+          d.id === payload.task_id 
+            ? { 
+                ...d, 
+                title: payload.info.title || d.title,
+                uploader: payload.info.uploader || d.uploader,
+                thumbnail_url: payload.info.thumbnail || d.thumbnail_url,
+                file_size: payload.info.filesize || payload.info.filesize_approx || d.file_size,
+                duration: payload.info.duration || d.duration,
+              } 
+            : d
+        )
+      );
     });
 
     const unlistenCompleted = listen<CompletedData>("download-completed", (event) => {
@@ -115,6 +133,7 @@ export function useDownloadEngine(
     });
 
     return () => {
+      unlistenAppReady.then((f) => f());
       unlistenProgress.then((f) => f());
       unlistenMetadata.then((f) => f());
       unlistenCompleted.then((f) => f());

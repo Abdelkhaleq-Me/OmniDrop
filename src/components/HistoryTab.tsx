@@ -24,9 +24,10 @@ export function HistoryTab({
   onDeleteTask,
   showToast,
 }: HistoryTabProps) {
-  const { t } = useLang();
+  const { lang, t } = useLang();
   const [historySearch, setHistorySearch] = useState("");
   const [historyFilter, setHistoryFilter] = useState<FilterType>("all");
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleOpenFolder = async (filePath: string) => {
     await openFileFolder(filePath, showToast);
@@ -86,7 +87,7 @@ export function HistoryTab({
         </button>
         <button
           className="filter-ch"
-          onClick={onClearCompleted}
+          onClick={() => setShowClearConfirm(true)}
           style={{
             marginInlineStart: "auto",
             border: "0.5px solid rgba(248,113,113,0.18)",
@@ -97,15 +98,50 @@ export function HistoryTab({
         </button>
       </div>
 
+      {showClearConfirm && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: 380, marginTop: "15vh" }}>
+            <div className="modal-header">
+              <span className="modal-header-title">
+                {lang === "ar" ? "تأكيد مسح السجل" : "Confirm Clear History"}
+              </span>
+            </div>
+            <div style={{ padding: "16px 15px", fontSize: "11.5px", color: "var(--t1)", lineHeight: "1.4" }}>
+              {lang === "ar"
+                ? "هل أنت متأكد من رغبتك في حذف جميع التحميلات المكتملة والمؤرشفة من السجل؟ لن يتم حذف الملفات الفعلية من جهازك."
+                : "Are you sure you want to clear all completed and archived downloads from history? The actual files on your disk will not be deleted."}
+            </div>
+            <div className="modal-footer" style={{ borderTop: "0.5px solid var(--bd)" }}>
+              <button
+                className="modal-cancel-btn"
+                onClick={() => setShowClearConfirm(false)}
+              >
+                {t.cancelModal}
+              </button>
+              <button
+                className="modal-download-btn"
+                style={{ background: "var(--s-fail)" }}
+                onClick={() => {
+                  onClearCompleted();
+                  setShowClearConfirm(false);
+                }}
+              >
+                {t.clearCompleted}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* History list */}
-      <div className="iw" style={{ marginTop: 8 }}>
+      <div className="items-wrapper" style={{ marginTop: 8 }}>
         {filteredHistory.length === 0 ? (
           <div className="no-items">
             <i className="ti ti-history"></i>
             <span>{t.emptyStateHistory}</span>
           </div>
         ) : (
-          <div className="lv">
+          <div className="list-view">
             {filteredHistory.map((item) => {
               let tagColor = "var(--s-done)";
               if (item.status === "cancelled") {
@@ -116,7 +152,7 @@ export function HistoryTab({
 
               return (
                 <div className="hist-item" key={item.id}>
-                  <div className="lth" style={{ width: 44, height: 28, borderRadius: 4 }}>
+                  <div className="list-thumbnail-img" style={{ width: 44, height: 28, borderRadius: 4 }}>
                     {item.thumbnail_url ? (
                       <img
                         src={item.thumbnail_url}
@@ -124,7 +160,7 @@ export function HistoryTab({
                         onError={(e) => (e.currentTarget.style.display = "none")}
                       />
                     ) : (
-                      <i className="lth-ic ti ti-brand-youtube"></i>
+                      <i className="list-thumb-icon ti ti-brand-youtube"></i>
                     )}
                   </div>
 
@@ -136,9 +172,9 @@ export function HistoryTab({
                       <span style={{ color: tagColor, fontWeight: 500 }}>
                         {item.status.toUpperCase()}
                       </span>
-                      <span className="dot">·</span>
+                      <span className="dot-separator">·</span>
                       <span>{formatBytes(item.file_size)}</span>
-                      <span className="dot">·</span>
+                      <span className="dot-separator">·</span>
                       <span>{item.platform}</span>
                     </div>
                   </div>
@@ -146,7 +182,7 @@ export function HistoryTab({
                   <div className="hist-action">
                     {item.file_path && item.status === "completed" && (
                       <button
-                        className="iab"
+                        className="item-action-btn"
                         title={t.openFolder}
                         onClick={() => handleOpenFolder(item.file_path!)}
                       >
@@ -154,7 +190,7 @@ export function HistoryTab({
                       </button>
                     )}
                     <button
-                      className="iab dl"
+                      className="item-action-btn dl"
                       onClick={() => onDeleteTask(item.id)}
                       title={t.deleteRecord}
                     >

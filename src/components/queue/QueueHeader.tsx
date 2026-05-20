@@ -21,16 +21,16 @@ export function QueueHeader({
   const { t } = useLang();
 
   return (
-    <div className="qb">
-      <span className="qtl">{t.queueTitle}</span>
-      <div className="qm">
-        <span className="bdg">{t.activeBadge.replace("{n}", activeCount.toString())}</span>
-        <button className="clrb" onClick={onClearAll}>
+    <div className="queue-bar">
+      <span className="queue-title">{t.queueTitle}</span>
+      <div className="queue-menu">
+        <span className="active-badge">{t.activeBadge.replace("{n}", activeCount.toString())}</span>
+        <button className="clear-btn" onClick={onClearAll}>
           {t.clearAll}
         </button>
 
         {/* View togglers list/grid */}
-        <div className="vtg">
+        <div className="view-toggle">
           <button
             className={`vb ${viewMode === "list" ? "ac" : ""}`}
             onClick={() => setViewMode("list")}

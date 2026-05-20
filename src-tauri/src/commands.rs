@@ -30,7 +30,6 @@ use crate::state::AppState;
 /// ## الإرجاع:
 /// - `Ok(task_id)`: معرف المهمة (UUID)
 /// - `Err(AppError)`: خطأ في الإدخال أو DB
-#[tauri::command]
 fn sanitize_media_info(info: &mut MediaInfo) {
     if let Some(ref t) = info.title {
         info.title = Some(t.chars().take(500).collect());
@@ -530,7 +529,7 @@ pub fn detect_platform(url: &str) -> String {
     }
 }
 
-/// يتحقق من صحة الرابط بصرامة
+/// يتحقق من صحة الرابط بصرامة ويمنع ثغرات الـ SSRF وعناوين الشبكة المحلية
 fn validate_url(url: &str) -> Result<(), AppError> {
     let parsed = url::Url::parse(url)
         .map_err(|_| AppError::InvalidUrl("الرابط المدخل غير صالح أو ذو صيغة خاطئة".into()))?;
@@ -540,5 +539,122 @@ fn validate_url(url: &str) -> Result<(), AppError> {
         return Err(AppError::InvalidUrl("يُسمح فقط بالروابط التي تبدأ بـ http أو https".into()));
     }
     
+    if let Some(host) = parsed.host_str() {
+        let lower = host.to_lowercase();
+        if lower == "localhost"
+            || lower == "127.0.0.1"
+            || lower == "[::1]"
+            || lower == "0.0.0.0"
+            || lower.starts_with("192.168.")
+            || lower.starts_with("10.")
+            || lower.starts_with("172.16.")
+            || lower.starts_with("172.17.")
+            || lower.starts_with("172.18.")
+            || lower.starts_with("172.19.")
+            || lower.starts_with("172.2")
+            || lower.starts_with("172.3")
+        {
+            return Err(AppError::InvalidUrl("الروابط المحلية أو الداخلية غير مسموح بها لأسباب أمنية".into()));
+        }
+    }
+    
     Ok(())
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct AppConfigPayload {
+    pub default_download_path: String,
+    pub max_concurrent_downloads: usize,
+    pub concurrent_fragments: u8,
+    pub http_chunk_size_mb: u8,
+}
+
+#[tauri::command]
+pub async fn get_config(
+    state: tauri::State<'_, Arc<AppState>>,
+) -> Result<AppConfigPayload, AppError> {
+    let config = state.config.read().await;
+    Ok(AppConfigPayload {
+        default_download_path: config.default_download_path.to_string_lossy().to_string(),
+        max_concurrent_downloads: config.max_concurrent_downloads,
+        concurrent_fragments: config.concurrent_fragments,
+        http_chunk_size_mb: config.http_chunk_size_mb,
+    })
+}
+
+#[tauri::command]
+pub async fn update_config(
+    new_config: AppConfigPayload,
+    state: tauri::State<'_, Arc<AppState>>,
+) -> Result<(), AppError> {
+    // 1. Update the database settings
+    queries::set_setting(&state.db_pool, "default_download_path", &new_config.default_download_path).await?;
+    queries::set_setting(&state.db_pool, "max_concurrent_downloads", &new_config.max_concurrent_downloads.to_string()).await?;
+    queries::set_setting(&state.db_pool, "concurrent_fragments", &new_config.concurrent_fragments.to_string()).await?;
+    queries::set_setting(&state.db_pool, "http_chunk_size_mb", &new_config.http_chunk_size_mb.to_string()).await?;
+
+    // 2. Update config RwLock in AppState
+    {
+        let mut config = state.config.write().await;
+        config.default_download_path = std::path::PathBuf::from(&new_config.default_download_path);
+        config.max_concurrent_downloads = new_config.max_concurrent_downloads;
+        config.concurrent_fragments = new_config.concurrent_fragments;
+        config.http_chunk_size_mb = new_config.http_chunk_size_mb;
+    }
+
+    // 3. Update download semaphore dynamically
+    {
+        let mut sem_guard = state.download_semaphore.write().await;
+        *sem_guard = Arc::new(tokio::sync::Semaphore::new(new_config.max_concurrent_downloads));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn select_directory() -> Result<Option<String>, AppError> {
+    let handle = tokio::task::spawn_blocking(|| {
+        rfd::FileDialog::new()
+            .pick_folder()
+            .map(|p| p.to_string_lossy().to_string())
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+    Ok(handle)
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct DbStats {
+    pub total_downloads: i64,
+    pub completed_downloads: i64,
+    pub failed_downloads: i64,
+    pub total_playlists: i64,
+}
+
+#[tauri::command]
+pub async fn get_db_stats(
+    state: tauri::State<'_, Arc<AppState>>,
+) -> Result<DbStats, AppError> {
+    let total_downloads: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM downloads")
+        .fetch_one(&state.db_pool)
+        .await?;
+        
+    let completed_downloads: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM downloads WHERE status = 'completed'")
+        .fetch_one(&state.db_pool)
+        .await?;
+
+    let failed_downloads: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM downloads WHERE status = 'failed'")
+        .fetch_one(&state.db_pool)
+        .await?;
+
+    let total_playlists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM collections")
+        .fetch_one(&state.db_pool)
+        .await?;
+
+    Ok(DbStats {
+        total_downloads,
+        completed_downloads,
+        failed_downloads,
+        total_playlists,
+    })
 }

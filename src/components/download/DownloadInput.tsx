@@ -47,8 +47,8 @@ export function DownloadInput({
   onDownload,
 }: DownloadInputProps) {
   return (
-    <div className="iz">
-      <div className={`ush ${badgeType === 'video' ? 'valid' : badgeType === 'playlist' ? 'ispl' : badgeType === 'unknown' ? 'invalid' : ''} ${isOptionsOpen ? 'popen' : ''}`}>
+    <div className="input-zone">
+      <div className={`url-shadow ${badgeType === 'video' ? 'valid' : badgeType === 'playlist' ? 'ispl' : badgeType === 'unknown' ? 'invalid' : ''} ${isOptionsOpen ? 'popen' : ''}`}>
         <UrlBar
           url={url}
           setUrl={setUrl}

@@ -85,3 +85,43 @@ export function formatSpeed(bytesPerSec: number): string {
   }
   return `${mb.toFixed(1)} MB/s`;
 }
+
+import type { Translations } from "../i18n/translations";
+
+/** الحصول على لون شريط الحالة المرتبط بالتحميل */
+export const getLeftStripColor = (status: string): string => {
+  switch (status) {
+    case "downloading":
+    case "fetching_metadata":
+      return "var(--s-dl)";
+    case "processing":
+      return "var(--s-proc)";
+    case "completed":
+      return "var(--s-comp)";
+    case "cancelled":
+      return "var(--s-canc)";
+    case "failed":
+      return "var(--s-fail)";
+    case "pending":
+    default:
+      return "var(--s-pend)";
+  }
+};
+
+/** ترجمة حالة المهمة بشكل آمن من نصوص الترجمات */
+export const getStatusTranslation = (t: Translations, status: string): string => {
+  const keys: Record<string, keyof Translations> = {
+    pending: "pending",
+    downloading: "downloading",
+    fetching_metadata: "fetching_metadata",
+    processing: "processing",
+    completed: "completed",
+    cancelled: "cancelled",
+    failed: "failed",
+  };
+  const key = keys[status];
+  if (key && t[key]) {
+    return t[key] as string;
+  }
+  return status;
+};

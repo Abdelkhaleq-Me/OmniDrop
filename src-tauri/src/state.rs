@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tauri::AppHandle;
 
 /// إعدادات التطبيق القابلة للتخصيص
-#[allow(dead_code)]
+#[derive(Debug, Clone)]
 pub struct AppConfig {
     pub default_download_path: std::path::PathBuf,
     pub max_concurrent_downloads: usize,
@@ -23,7 +23,7 @@ pub struct AppState {
     pub db_pool: SqlitePool,
 
     /// التحكم في التزامن: يمنع التطبيق من استهلاك موارد الجهاز بالكامل
-    pub download_semaphore: Arc<Semaphore>,
+    pub download_semaphore: tokio::sync::RwLock<Arc<Semaphore>>,
 
     /// إعدادات المستخدم
     pub config: tokio::sync::RwLock<AppConfig>,
@@ -40,23 +40,13 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(pool: SqlitePool, handle: AppHandle, max_downloads: usize) -> Self {
-        // تحديد مجلد التحميلات الافتراضي للمستخدم
-        // لا unwrap() — نستخدم مجلد التشغيل الحالي كبديل آمن
-        let download_dir = dirs::download_dir()
-            .or_else(|| std::env::current_dir().ok())
-            .unwrap_or_else(|| std::path::PathBuf::from("."));
-
+    pub fn new(pool: SqlitePool, handle: AppHandle, config: AppConfig) -> Self {
+        let max_downloads = config.max_concurrent_downloads;
         Self {
             active_tasks: DashMap::new(),
             db_pool: pool,
-            download_semaphore: Arc::new(Semaphore::new(max_downloads)),
-            config: tokio::sync::RwLock::new(AppConfig {
-                default_download_path: download_dir,
-                max_concurrent_downloads: max_downloads,
-                concurrent_fragments: 4,
-                http_chunk_size_mb: 10,
-            }),
+            download_semaphore: tokio::sync::RwLock::new(Arc::new(Semaphore::new(max_downloads))),
+            config: tokio::sync::RwLock::new(config),
             progress_buffer: std::sync::Mutex::new(std::collections::HashMap::new()),
             app_handle: handle,
             shutdown_token: CancellationToken::new(),

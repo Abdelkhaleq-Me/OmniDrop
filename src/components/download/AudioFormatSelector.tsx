@@ -15,7 +15,7 @@ export function AudioFormatSelector({ afmt, setAfmt }: AudioFormatSelectorProps)
   const formats = ["mp3", "m4a", "flac", "opus"];
 
   return (
-    <div className="or">
+    <div className="options-row">
       <span className="ol">{t.format}</span>
       {formats.map((fmt) => (
         <button

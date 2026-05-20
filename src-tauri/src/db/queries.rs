@@ -341,7 +341,7 @@ pub async fn get_active_downloads(
             duration, file_path, file_size, extension, quality,
             status, error_msg, created_at, updated_at, completed_at
          FROM downloads
-         WHERE status IN ('pending', 'downloading')
+         WHERE status IN ('pending', 'fetching_metadata', 'downloading', 'processing')
          ORDER BY created_at ASC"
     )
     .fetch_all(pool)
@@ -455,4 +455,44 @@ pub async fn clear_all(
         .await?;
 
     Ok(result_downloads.rows_affected())
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  إدارة الإعدادات
+// ═══════════════════════════════════════════════════════════════
+
+/// جلب قيمة إعداد معين بمعرفه
+pub async fn get_setting(
+    pool: &SqlitePool,
+    key: &str,
+) -> Result<Option<String>, AppError> {
+    let val: Option<String> = sqlx::query_scalar("SELECT value FROM settings WHERE key = ?")
+        .bind(key)
+        .fetch_optional(pool)
+        .await?;
+    Ok(val)
+}
+
+/// تعديل أو إدراج إعداد معين
+pub async fn set_setting(
+    pool: &SqlitePool,
+    key: &str,
+    value: &str,
+) -> Result<(), AppError> {
+    sqlx::query("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+        .bind(key)
+        .bind(value)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// إلغاء جميع التحميلات النشطة في قاعدة البيانات (تحديث الحالات)
+pub async fn cancel_all_active_in_db(
+    pool: &SqlitePool,
+) -> Result<(), AppError> {
+    sqlx::query("UPDATE downloads SET status = 'cancelled' WHERE status IN ('pending', 'fetching_metadata', 'downloading', 'processing')")
+        .execute(pool)
+        .await?;
+    Ok(())
 }

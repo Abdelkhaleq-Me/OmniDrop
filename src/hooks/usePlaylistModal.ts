@@ -23,7 +23,6 @@ interface UsePlaylistModalReturn {
     url: string,
     options: DownloadOptions,
     onDone: () => void,
-    startPlaylistDownload: (url: string, options: DownloadOptions, selectedIndices?: number[]) => Promise<void>,
   ) => Promise<void>;
   toggleItem: (id: number) => void;
   toggleSelectAll: () => void;
@@ -33,6 +32,7 @@ interface UsePlaylistModalReturn {
 export function usePlaylistModal(
   showToast: ShowToastFn,
   t: Translations,
+  startPlaylistDownload: (url: string, options: DownloadOptions, selectedIndices?: number[]) => Promise<void>,
 ): UsePlaylistModalReturn {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,7 +84,6 @@ export function usePlaylistModal(
     url: string,
     options: DownloadOptions,
     onDone: () => void,
-    startPlaylistDownload: (url: string, options: DownloadOptions, selectedIndices?: number[]) => Promise<void>,
   ) => {
     if (selectedIds.size === 0) {
       showToast(tRef.current.selectAtLeastOne, "error");
@@ -110,7 +109,7 @@ export function usePlaylistModal(
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedIds, showToast]);
+  }, [selectedIds, showToast, startPlaylistDownload]);
 
   const toggleItem = useCallback((id: number) => {
     setSelectedIds((prev) => {

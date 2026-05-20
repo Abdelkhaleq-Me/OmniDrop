@@ -78,7 +78,7 @@ function App() {
     toggleItem: handleTogglePlaylistItem,
     toggleSelectAll: handleSelectAllPlaylist,
     close: closePlaylistModal,
-  } = usePlaylistModal(showToast, t);
+  } = usePlaylistModal(showToast, t, startPlaylistDownload);
 
   // تحديث نوع الرابط والبادج عند التغيير
   const handleUrlChange = (newUrl: string) => {
@@ -96,12 +96,9 @@ function App() {
         showToast(lang === "ar" ? "تم اللصق من الحافظة" : "Pasted from clipboard", "info");
       }
     } catch (e) {
-      const fallback = "https://youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknc9TTnkwVquh";
-      setUrl(fallback);
-      setBadgeType(detectLinkType(fallback) || "");
       showToast(
-        lang === "ar" ? "تم لصق رابط قائمة تشغيل تجريبية" : "Pasted demo playlist URL",
-        "info"
+        lang === "ar" ? "تعذر الوصول للحافظة. يرجى لصق الرابط يدوياً." : "Failed to access clipboard. Please paste manually.",
+        "error"
       );
     }
   };
@@ -150,8 +147,7 @@ function App() {
         setUrl("");
         setBadgeType("");
         refreshData();
-      },
-      startPlaylistDownload
+      }
     );
   };
 
@@ -236,7 +232,7 @@ function App() {
               />
 
               {/* محتوى قائمة التحميل أو حالة فارغة */}
-              <div className="iw">
+              <div className="items-wrapper">
                 {activeQueueItems.length === 0 ? (
                   <div className="no-items">
                     <i className="ti ti-download"></i>
@@ -262,33 +258,33 @@ function App() {
               </div>
 
               {/* شريط حالة المحرك السفلي (Status Bar) */}
-              <div className="stb">
-                <div className="sti">
+              <div className="status-bar">
+                <div className="status-item">
                   <i className="ti ti-download"></i>
-                  <span className="stv">{activeCount}</span>&nbsp;{t.activeCount}
+                  <span className="status-value">{activeCount}</span>&nbsp;{t.activeCount}
                 </div>
-                <span className="sts">·</span>
-                <div className="sti">
+                <span className="status-separator">·</span>
+                <div className="status-item">
                   <i className="ti ti-loader spin"></i>
-                  <span className="stv">{processingCount}</span>&nbsp;{t.processingCount}
+                  <span className="status-value">{processingCount}</span>&nbsp;{t.processingCount}
                 </div>
-                <span className="sts">·</span>
-                <div className="sti">
+                <span className="status-separator">·</span>
+                <div className="status-item">
                   <i className="ti ti-check"></i>
-                  <span className="stv">{completedCount}</span>&nbsp;{t.completedCount}
+                  <span className="status-value">{completedCount}</span>&nbsp;{t.completedCount}
                 </div>
-                <span className="sts">·</span>
-                <div className="sti">
+                <span className="status-separator">·</span>
+                <div className="status-item">
                   <i className="ti ti-ban"></i>
-                  <span className="stv">{cancelledCount}</span>&nbsp;{t.cancelledCount}
+                  <span className="status-value">{cancelledCount}</span>&nbsp;{t.cancelledCount}
                 </div>
-                <span className="sts">·</span>
-                <div className="sti">
+                <span className="status-separator">·</span>
+                <div className="status-item">
                   <i className="ti ti-alert-circle"></i>
-                  <span className="stv">{failedCount}</span>&nbsp;{t.failedCount}
+                  <span className="status-value">{failedCount}</span>&nbsp;{t.failedCount}
                 </div>
-                <div className="stsp"></div>
-                <div className="nsp">
+                <div className="status-spacer"></div>
+                <div className="network-speed">
                   <i className="ti ti-activity"></i>
                   {currentSpeed}
                 </div>
