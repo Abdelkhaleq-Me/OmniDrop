@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { openFileFolder } from "../utils/opener";
 import { useLang } from "../i18n/LangContext";
 import type { DownloadRecord } from "../types";
 import { formatBytes } from "../utils/format";
@@ -29,11 +29,7 @@ export function HistoryTab({
   const [historyFilter, setHistoryFilter] = useState<FilterType>("all");
 
   const handleOpenFolder = async (filePath: string) => {
-    try {
-      await invoke("plugin:opener|open_path", { path: filePath });
-    } catch (err: any) {
-      showToast(err.toString(), "error");
-    }
+    await openFileFolder(filePath, showToast);
   };
 
   // Filter history records

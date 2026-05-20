@@ -12,7 +12,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::core::downloader;
-use crate::core::parser::DownloadOptions;
+use crate::core::parser::{DownloadOptions, MediaInfo};
 use crate::db::queries;
 use crate::error::AppError;
 use crate::state::AppState;
@@ -31,9 +31,30 @@ use crate::state::AppState;
 /// - `Ok(task_id)`: معرف المهمة (UUID)
 /// - `Err(AppError)`: خطأ في الإدخال أو DB
 #[tauri::command]
+fn sanitize_media_info(info: &mut MediaInfo) {
+    if let Some(ref t) = info.title {
+        info.title = Some(t.chars().take(500).collect());
+    }
+    if let Some(ref u) = info.uploader {
+        info.uploader = Some(u.chars().take(200).collect());
+    }
+    if let Some(ref thumb) = info.thumbnail {
+        if thumb.starts_with("http://") || thumb.starts_with("https://") {
+            info.thumbnail = Some(thumb.chars().take(1024).collect());
+        } else {
+            info.thumbnail = None;
+        }
+    }
+    if let Some(ref ext) = info.ext {
+        info.ext = Some(ext.chars().take(20).collect());
+    }
+}
+
+#[tauri::command]
 pub async fn start_download(
     url: String,
     options: Option<DownloadOptions>,
+    metadata: Option<MediaInfo>,
     app_handle: tauri::AppHandle,
     state: tauri::State<'_, Arc<AppState>>,
 ) -> Result<String, AppError> {
@@ -43,6 +64,11 @@ pub async fn start_download(
 
     // استخدام الخيارات المُرسلة أو الافتراضية
     let opts = options.unwrap_or_default();
+
+    let mut metadata = metadata;
+    if let Some(ref mut info) = metadata {
+        sanitize_media_info(info);
+    }
 
     let task_id = Uuid::new_v4().to_string();
     let platform = detect_platform(&url);
@@ -72,6 +98,7 @@ pub async fn start_download(
             opts,
             token,
             false, // لا نتخطى جلب البيانات الوصفية مبكراً للفيديو الفردي
+            metadata,
         ).await;
     });
 
@@ -172,6 +199,7 @@ pub struct MediaDetails {
     pub total_duration: f64,
     pub max_height: i32,
     pub qualities: Vec<QualityInfo>,
+    pub media_info: Option<MediaInfo>,
 }
 
 /// يستخرج تفاصيل المحتوى والجودات والأحجام التقريبية لكل جودة.
@@ -205,12 +233,12 @@ pub async fn fetch_media_details(
         // إنشاء الأحجام التقديرية لكل جودة مستهدفة
         let mut qualities = Vec::new();
         let target_heights = [
-            ("360p", 360, 62_500),
-            ("480p", 480, 125_000),
-            ("720p", 720, 312_500),
-            ("1080p", 1080, 625_000),
-            ("2K", 1440, 1_250_000),
-            ("4K", 2160, 2_500_000),
+            ("360p", 360, 40_000),
+            ("480p", 480, 80_000),
+            ("720p", 720, 150_000),
+            ("1080p", 1080, 300_000),
+            ("2K", 1440, 600_000),
+            ("4K", 2160, 1_500_000),
         ];
 
         for (label, height, bps) in target_heights {
@@ -228,6 +256,7 @@ pub async fn fetch_media_details(
             total_duration,
             max_height: 2160,
             qualities,
+            media_info: None,
         })
     } else {
         // جلب بيانات فيديو فردي باستخدام --dump-json
@@ -265,12 +294,12 @@ pub async fn fetch_media_details(
 
         let mut qualities = Vec::new();
         let target_heights = [
-            ("360p", 360, 62_500),
-            ("480p", 480, 125_000),
-            ("720p", 720, 312_500),
-            ("1080p", 1080, 625_000),
-            ("2K", 1440, 1_250_000),
-            ("4K", 2160, 2_500_000),
+            ("360p", 360, 40_000),
+            ("480p", 480, 80_000),
+            ("720p", 720, 150_000),
+            ("1080p", 1080, 300_000),
+            ("2K", 1440, 600_000),
+            ("4K", 2160, 1_500_000),
         ];
 
         let formats = json["formats"].as_array();
@@ -313,12 +342,15 @@ pub async fn fetch_media_details(
             });
         }
 
+        let media_info = crate::core::parser::try_parse_media_info(&stdout);
+
         Ok(MediaDetails {
             title,
             is_playlist: false,
             total_duration: duration,
             max_height,
             qualities,
+            media_info,
         })
     }
 }

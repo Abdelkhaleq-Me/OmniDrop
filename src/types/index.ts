@@ -81,6 +81,7 @@ export interface MediaDetails {
   is_playlist: boolean;
   max_height: number;
   qualities: QualityInfo[];
+  media_info: MediaInfo | null;
 }
 
 /** عنصر فيديو في نافذة اختيار قائمة التشغيل */

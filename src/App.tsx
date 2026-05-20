@@ -126,7 +126,7 @@ function App() {
             "info"
           );
         }
-        await startDownload(url, opts);
+        await startDownload(url, opts, mediaDetails?.media_info);
         setUrl("");
         setBadgeType("");
       } catch (err: any) {

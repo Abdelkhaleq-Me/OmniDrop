@@ -53,6 +53,7 @@ pub async fn run_download(
     options: DownloadOptions,
     token: CancellationToken,
     skip_prefetch: bool,
+    metadata: Option<MediaInfo>,
 ) {
     // ── المرحلة 1: الحصول على تصريح من الـ Semaphore ─────────
     let _permit = tokio::select! {
@@ -87,7 +88,24 @@ pub async fn run_download(
         return;
     }
 
-    let _media_info = if skip_prefetch {
+    let _media_info = if let Some(info) = metadata {
+        let duration_i64 = info.duration.map(|d| d as i64);
+        let file_size = info.filesize.or(info.filesize_approx);
+
+        let _ = queries::update_metadata(
+            &state.db_pool,
+            &task_id,
+            info.title.as_deref(),
+            info.uploader.as_deref(),
+            info.thumbnail.as_deref(),
+            duration_i64,
+            info.ext.as_deref(),
+            file_size,
+        ).await;
+
+        let _ = app_handle.emit("download-metadata", &info);
+        Some(info)
+    } else if skip_prefetch {
         None
     } else {
         let _ = app_handle.emit("download-progress", ProgressData {
@@ -296,7 +314,7 @@ pub async fn run_playlist_download(
         let tid_clone = task_id.clone();
 
         let handle = tokio::spawn(async move {
-            run_download(app_clone, state_clone, tid_clone, video_url, opts_clone, child_token, true).await;
+            run_download(app_clone, state_clone, tid_clone, video_url, opts_clone, child_token, true, None).await;
         });
         child_handles.push(handle);
 

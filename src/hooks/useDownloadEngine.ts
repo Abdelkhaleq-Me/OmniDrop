@@ -14,6 +14,7 @@ import type {
   FailedData,
   PlaylistStartedData,
   DownloadOptions,
+  MediaInfo,
 } from "../types";
 import type { ShowToastFn } from "./useToast";
 import type { Translations } from "../i18n/translations";
@@ -23,7 +24,7 @@ interface UseDownloadEngineReturn {
   collections: CollectionRecord[];
   liveProgress: Record<string, ProgressData>;
   refreshData: () => Promise<void>;
-  startDownload: (url: string, options: DownloadOptions) => Promise<void>;
+  startDownload: (url: string, options: DownloadOptions, metadata?: MediaInfo | null) => Promise<void>;
   startPlaylistDownload: (url: string, options: DownloadOptions, selectedIndices?: number[]) => Promise<void>;
   cancelTask: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
@@ -113,9 +114,6 @@ export function useDownloadEngine(
       refreshData();
     });
 
-    // Polling كل 4 ثوانٍ (تحسين مستقبلي: إيقافه عند عدم وجود مهام نشطة)
-    const interval = setInterval(refreshData, 4000);
-
     return () => {
       unlistenProgress.then((f) => f());
       unlistenMetadata.then((f) => f());
@@ -123,15 +121,26 @@ export function useDownloadEngine(
       unlistenFailed.then((f) => f());
       unlistenCancelled.then((f) => f());
       unlistenPlaylist.then((f) => f());
-      clearInterval(interval);
     };
   }, [refreshData, showToast]);
 
+  // ── Polling ذكي يعتمد على وجود تنزيلات نشطة ─────────────────
+  useEffect(() => {
+    const hasActiveDownloads = downloads.some((d) =>
+      ["pending", "fetching_metadata", "downloading", "processing"].includes(d.status)
+    );
+
+    if (!hasActiveDownloads) return;
+
+    const interval = setInterval(refreshData, 4000);
+    return () => clearInterval(interval);
+  }, [downloads, refreshData]);
+
   // ── إجراءات التحميل ────────────────────────────────────────
 
-  const startDownload = useCallback(async (url: string, options: DownloadOptions) => {
+  const startDownload = useCallback(async (url: string, options: DownloadOptions, metadata?: MediaInfo | null) => {
     showToast(tRef.current.toastStarted, "info");
-    await invoke("start_download", { url: url.trim(), options });
+    await invoke("start_download", { url: url.trim(), options, metadata: metadata || null });
     refreshData();
   }, [refreshData, showToast]);
 

@@ -73,15 +73,21 @@ export function OptionsDrawer({
         {/* Dynamic Description Strip */}
         <div className="sbar">
           <i className="ti ti-info-circle sico"></i>
-          <span
-            className="stxt"
-            dangerouslySetInnerHTML={{
-              __html:
-                mode === "video"
-                  ? t.singleInfo.replace("{q}", `${quality}p`)
-                  : t.audioInfo.replace("{f}", afmt.toUpperCase()),
-            }}
-          />
+          <span className="stxt">
+            {mode === "video" ? (
+              <>
+                {t.singleInfoPre}
+                <b>{quality}p</b>
+                {t.singleInfoPost}
+              </>
+            ) : (
+              <>
+                {t.audioInfoPre}
+                <b>{afmt.toUpperCase()}</b>
+                {t.audioInfoPost}
+              </>
+            )}
+          </span>
         </div>
 
         {/* Size Estimator Strip */}

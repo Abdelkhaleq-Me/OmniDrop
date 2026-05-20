@@ -3,7 +3,7 @@
 // مكوّن عرض التحميلات كشبكة (Grid View)
 // ═══════════════════════════════════════════════════════════════
 
-import { invoke } from "@tauri-apps/api/core";
+import { openFileFolder } from "../../utils/opener";
 import { useLang } from "../../i18n/LangContext";
 import type { DownloadRecord, ProgressData } from "../../types";
 import { formatBytes } from "../../utils/format";
@@ -26,11 +26,7 @@ export function QueueGrid({
   const { t } = useLang();
 
   const handleOpenFolder = async (filePath: string) => {
-    try {
-      await invoke("plugin:opener|open_path", { path: filePath });
-    } catch (err: any) {
-      showToast(err.toString(), "error");
-    }
+    await openFileFolder(filePath, showToast);
   };
 
   return (
