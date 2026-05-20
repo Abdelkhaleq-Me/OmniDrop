@@ -96,13 +96,14 @@ export function SettingsTab() {
 
   const inputStyle = {
     padding: "6px 12px",
-    borderRadius: "8px",
-    border: "1px solid var(--border)",
-    background: "var(--surface)",
-    color: "var(--text)",
+    borderRadius: "6px",
+    border: "0.5px solid var(--bd2)",
+    background: "var(--bg2)",
+    color: "var(--t0)",
     fontFamily: "inherit",
-    fontSize: "14px",
+    fontSize: "11px",
     outline: "none",
+    transition: "all 0.15s ease",
   };
 
   return (

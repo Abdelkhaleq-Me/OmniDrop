@@ -65,7 +65,7 @@ export function UrlBar({
 
       {/* 3. BadgeType */}
       {badgeType && (
-        <span className={`tbadge show ${tbadgeTypeClass}`}>
+        <span className={`type-badge show ${tbadgeTypeClass}`}>
           {badgeType === "video" && (
             <>
               <i className="ti ti-video"></i>
@@ -101,7 +101,7 @@ export function UrlBar({
 
       {/* 6. Options button */}
       <button
-        className={`tbtn ${isOptionsOpen ? "on" : ""}`}
+        className={`toggle-btn ${isOptionsOpen ? "on" : ""}`}
         onClick={() => setIsOptionsOpen(!isOptionsOpen)}
         aria-expanded={isOptionsOpen}
       >

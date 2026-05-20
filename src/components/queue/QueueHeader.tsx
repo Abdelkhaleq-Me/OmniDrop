@@ -32,14 +32,14 @@ export function QueueHeader({
         {/* View togglers list/grid */}
         <div className="view-toggle">
           <button
-            className={`vb ${viewMode === "list" ? "ac" : ""}`}
+            className={`view-btn ${viewMode === "list" ? "ac" : ""}`}
             onClick={() => setViewMode("list")}
             title={viewMode === "list" ? "" : t.queueTitle} // simple titles
           >
             <i className="ti ti-list"></i>
           </button>
           <button
-            className={`vb ${viewMode === "grid" ? "ac" : ""}`}
+            className={`view-btn ${viewMode === "grid" ? "ac" : ""}`}
             onClick={() => setViewMode("grid")}
           >
             <i className="ti ti-layout-grid"></i>
