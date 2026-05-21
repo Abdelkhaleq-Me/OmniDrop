@@ -56,13 +56,41 @@ export function useDownloadEngine(
     }
   }, []);
 
+  const [isReady, setIsReady] = useState(false);  // ← حالة جاهزية الباكأند
+
+  // الاستماع لحدث جاهزية الباكأند أولاً
+  useEffect(() => {
+    // احتمال أن التطبيق جاهز قبل أن تُسجَّل هذه الـ listener
+    // لذا نحاول الاتصال بـ DB مباشرةً — إذا نجح فالباكأند جاهز
+    const tryConnect = async () => {
+      try {
+        await invoke("get_download_history", { limit: 1, offset: 0 });
+        setIsReady(true);
+      } catch {
+        // لم يجهز بعد — ننتظر app-ready
+      }
+    };
+    tryConnect();
+
+    // الاستماع لـ app-ready كـ fallback موثوق
+    const unlistenReady = listen("app-ready", () => {
+      setIsReady(true);
+    });
+
+    return () => {
+      unlistenReady.then((f) => f());
+    };
+  }, []);
+
+  // refreshData يُستدعى فقط بعد أن يكون الباكأند جاهزاً
+  useEffect(() => {
+    if (!isReady) return;
+    refreshData();
+  }, [isReady, refreshData]);
+
   // ── تسجيل أحداث Tauri ─────────────────────────────────────
   useEffect(() => {
-    refreshData();
-
-    const unlistenAppReady = listen("app-ready", () => {
-      refreshData();
-    });
+    if (!isReady) return;
 
     const unlistenProgress = listen<ProgressData[]>("downloads-batch-progress", (event) => {
       const updates = event.payload;
@@ -133,7 +161,6 @@ export function useDownloadEngine(
     });
 
     return () => {
-      unlistenAppReady.then((f) => f());
       unlistenProgress.then((f) => f());
       unlistenMetadata.then((f) => f());
       unlistenCompleted.then((f) => f());
@@ -141,7 +168,7 @@ export function useDownloadEngine(
       unlistenCancelled.then((f) => f());
       unlistenPlaylist.then((f) => f());
     };
-  }, [refreshData, showToast]);
+  }, [isReady, refreshData, showToast]);
 
   // ── Polling ذكي يعتمد على وجود تنزيلات نشطة ─────────────────
   useEffect(() => {
