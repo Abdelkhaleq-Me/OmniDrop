@@ -17,6 +17,8 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-shell = "2" # ضروري جداً لتشغيل yt-dlp و ffmpeg كـ Sidecars
+tauri-plugin-dialog = "2"
+
 
 # --- Async Runtime (محرك المهام المتعددة) ---
 tokio = { version = "1", features = ["full"] }

@@ -568,66 +568,91 @@ fn validate_url(url: &str) -> Result<(), AppError> {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct AppConfigPayload {
-    pub default_download_path: String,
-    pub max_concurrent_downloads: usize,
+pub struct AppConfigDto {
+    pub download_path: String,
     pub concurrent_fragments: u8,
     pub http_chunk_size_mb: u8,
+    pub max_concurrent_downloads: usize,
 }
 
+/// يُرجع الإعدادات الحالية للواجهة
 #[tauri::command]
-pub async fn get_config(
+pub async fn get_app_config(
     state: tauri::State<'_, Arc<AppState>>,
-) -> Result<AppConfigPayload, AppError> {
+) -> Result<AppConfigDto, AppError> {
     let config = state.config.read().await;
-    Ok(AppConfigPayload {
-        default_download_path: config.default_download_path.to_string_lossy().to_string(),
-        max_concurrent_downloads: config.max_concurrent_downloads,
+    Ok(AppConfigDto {
+        download_path: config.default_download_path.to_string_lossy().into_owned(),
         concurrent_fragments: config.concurrent_fragments,
         http_chunk_size_mb: config.http_chunk_size_mb,
+        max_concurrent_downloads: config.max_concurrent_downloads,
     })
 }
 
+/// يُحدِّث الإعدادات من الواجهة
 #[tauri::command]
-pub async fn update_config(
-    new_config: AppConfigPayload,
+pub async fn update_app_config(
+    new_config: AppConfigDto,
     state: tauri::State<'_, Arc<AppState>>,
 ) -> Result<(), AppError> {
+    let new_path = std::path::PathBuf::from(&new_config.download_path);
+    
+    // التحقق من أن المجلد موجود أو يمكن إنشاؤه
+    if !new_path.exists() {
+        tokio::fs::create_dir_all(&new_path).await
+            .map_err(|e| AppError::IoError(e))?;
+    }
+    
+    // التحقق من أن القيم في نطاق معقول
+    if new_config.concurrent_fragments == 0 || new_config.concurrent_fragments > 32 {
+        return Err(AppError::Internal("concurrent_fragments يجب أن يكون بين 1 و32".into()));
+    }
+    if new_config.http_chunk_size_mb == 0 || new_config.http_chunk_size_mb > 100 {
+        return Err(AppError::Internal("http_chunk_size_mb يجب أن يكون بين 1 و100".into()));
+    }
+    
     // 1. Update the database settings
-    queries::set_setting(&state.db_pool, "default_download_path", &new_config.default_download_path).await?;
-    queries::set_setting(&state.db_pool, "max_concurrent_downloads", &new_config.max_concurrent_downloads.to_string()).await?;
+    queries::set_setting(&state.db_pool, "default_download_path", &new_config.download_path).await?;
     queries::set_setting(&state.db_pool, "concurrent_fragments", &new_config.concurrent_fragments.to_string()).await?;
     queries::set_setting(&state.db_pool, "http_chunk_size_mb", &new_config.http_chunk_size_mb.to_string()).await?;
+    queries::set_setting(&state.db_pool, "max_concurrent_downloads", &new_config.max_concurrent_downloads.to_string()).await?;
 
     // 2. Update config RwLock in AppState
     {
         let mut config = state.config.write().await;
-        config.default_download_path = std::path::PathBuf::from(&new_config.default_download_path);
-        config.max_concurrent_downloads = new_config.max_concurrent_downloads;
+        config.default_download_path = new_path;
         config.concurrent_fragments = new_config.concurrent_fragments;
         config.http_chunk_size_mb = new_config.http_chunk_size_mb;
+        config.max_concurrent_downloads = new_config.max_concurrent_downloads;
     }
-
+    
     // 3. Update download semaphore dynamically
     {
         let mut sem_guard = state.download_semaphore.write().await;
         *sem_guard = Arc::new(tokio::sync::Semaphore::new(new_config.max_concurrent_downloads));
     }
-
+    
     Ok(())
 }
 
+/// يفتح نافذة اختيار مجلد
 #[tauri::command]
-pub async fn select_directory() -> Result<Option<String>, AppError> {
-    let handle = tokio::task::spawn_blocking(|| {
-        rfd::FileDialog::new()
-            .pick_folder()
-            .map(|p| p.to_string_lossy().to_string())
-    })
-    .await
-    .map_err(|e| AppError::Internal(e.to_string()))?;
-    Ok(handle)
+pub async fn pick_download_folder(
+    app_handle: tauri::AppHandle,
+) -> Result<Option<String>, AppError> {
+    use tauri_plugin_dialog::DialogExt;
+    let folder = app_handle.dialog()
+        .file()
+        .blocking_pick_folder();
+    
+    if let Some(file_path) = folder {
+        if let Ok(path_buf) = file_path.into_path() {
+            return Ok(Some(path_buf.to_string_lossy().into_owned()));
+        }
+    }
+    Ok(None)
 }
+
 
 #[derive(Debug, serde::Serialize)]
 pub struct DbStats {

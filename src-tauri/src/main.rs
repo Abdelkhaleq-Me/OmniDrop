@@ -193,6 +193,7 @@ async fn main() {
         // ── تسجيل الإضافات ────────────────────────────────
         .plugin(tauri_plugin_shell::init())   // ضروري لـ Sidecar (yt-dlp + ffmpeg)
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         // ── تسجيل أوامر IPC ──────────────────────────────
         .invoke_handler(tauri::generate_handler![
             commands::start_download,
@@ -208,9 +209,9 @@ async fn main() {
             commands::clear_all_downloads,
             commands::fetch_playlist_info,
             commands::fetch_media_details,
-            commands::get_config,
-            commands::update_config,
-            commands::select_directory,
+            commands::get_app_config,
+            commands::update_app_config,
+            commands::pick_download_folder,
             commands::get_db_stats,
         ])
         .on_window_event(|window, event| {

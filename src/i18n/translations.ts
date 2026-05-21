@@ -79,6 +79,7 @@ export const translations = {
     // ── الإعدادات ────────────────────────────────────────────
     settingsTitle: "إعدادات النظام والشبكة",
     settingsDesc: "عرض إعدادات محرك التحميل الحالية ونمط التزامن",
+    downloadFolder: "مجلد التحميل",
     parallelFragments: "أجزاء التحميل المتوازية (Concurrent Fragments)",
     chunkSize: "حجم الجزء لطلب HTTP (Chunk Size)",
     activeLimits: "الحد الأقصى للتحميلات النشطة",
@@ -209,6 +210,7 @@ export const translations = {
 
     settingsTitle: "System & Network Settings",
     settingsDesc: "View current download engine settings and concurrency mode",
+    downloadFolder: "Download Folder",
     parallelFragments: "Parallel Download Fragments (Concurrent)",
     chunkSize: "HTTP Chunk Size",
     activeLimits: "Concurrent Downloads Max Limits",
