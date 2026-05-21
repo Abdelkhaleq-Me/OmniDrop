@@ -158,7 +158,17 @@ export function useDownloadEngine(
     const unlistenPlaylist = listen<PlaylistStartedData>("playlist-started", (event) => {
       const data = event.payload;
       showToast(tRef.current.toastPlaylistStarted.replace("{n}", data.total_items.toString()), "success");
-      refreshData();
+
+      // تحديث المجموعة محلياً فوراً قبل DB refresh لمنع عرض الحالة القديمة
+      setCollections((prev) =>
+        prev.map((col) =>
+          col.id === data.collection_id
+            ? { ...col, status: "downloading", total_items: data.total_items }
+            : col
+        )
+      );
+
+      refreshData(); // للتأكد من التزامن الكامل مع DB
     });
 
     return () => {
