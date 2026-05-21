@@ -125,3 +125,17 @@ export const getStatusTranslation = (t: Translations, status: string): string =>
   }
   return status;
 };
+
+/** تقدير حجم الصوت بالبايت بناءً على المدة بالثواني والصيغة */
+export const getEstimatedAudioSize = (duration: number | null | undefined, format: string): number => {
+  if (!duration || duration <= 0) return 0;
+  const bitrates: Record<string, number> = {
+    mp3: 192000,
+    m4a: 128000,
+    flac: 800000,
+    opus: 128000,
+  };
+  const bps = bitrates[format.toLowerCase()] || 128000;
+  return Math.round((duration * bps) / 8);
+};
+

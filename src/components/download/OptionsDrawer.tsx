@@ -7,7 +7,7 @@ import { useLang } from "../../i18n/LangContext";
 import type { MediaDetails } from "../../types";
 import { QualitySelector } from "./QualitySelector";
 import { AudioFormatSelector } from "./AudioFormatSelector";
-import { SizeEstimator } from "./SizeEstimator";
+import { getEstimatedAudioSize, formatBytes } from "../../utils/format";
 
 interface OptionsDrawerProps {
   isOpen: boolean;
@@ -35,6 +35,62 @@ export function OptionsDrawer({
   getSelectedQualitySize,
 }: OptionsDrawerProps) {
   const { t } = useLang();
+
+  // مساعد لبناء نص الحالة الموحد مع الحجم المقدر
+  const renderStatusContent = () => {
+    if (!mediaDetails) {
+      if (mode === "video") {
+        return (
+          <>
+            {t.badgeVideo} · <b>{quality}p</b>
+          </>
+        );
+      } else {
+        return (
+          <>
+            {t.audioInfoPre.replace(" · ", "")} · <b>{afmt.toUpperCase()}</b>
+          </>
+        );
+      }
+    }
+
+    const isPlaylist = mediaDetails.is_playlist;
+    const typeLabel = isPlaylist ? t.badgePlaylist : (mode === "video" ? t.badgeVideo : t.audioInfoPre.replace(" · ", ""));
+
+    if (mode === "video") {
+      const sizeStr = getSelectedQualitySize();
+      return (
+        <>
+          {typeLabel} · <b>{quality}p</b>
+          {sizeStr && (
+            <>
+              {" · "}
+              <b style={{ color: "var(--bl)" }}>{sizeStr}</b>
+            </>
+          )}
+          {!isPlaylist && mediaDetails.max_height > 0 && (
+            <span style={{ opacity: 0.6, fontSize: "10px", marginInlineStart: "8px" }}>
+              ({t.maxSupportedRes} {mediaDetails.max_height}p)
+            </span>
+          )}
+        </>
+      );
+    } else {
+      const sizeBytes = getEstimatedAudioSize(mediaDetails.total_duration, afmt);
+      const sizeStr = sizeBytes > 0 ? formatBytes(sizeBytes) : null;
+      return (
+        <>
+          {typeLabel} · <b>{afmt.toUpperCase()}</b>
+          {sizeStr && (
+            <>
+              {" · "}
+              <b style={{ color: "var(--bl)" }}>{sizeStr}</b>
+            </>
+          )}
+        </>
+      );
+    }
+  };
 
   return (
     <div className={`options-panel ${isOpen ? "open" : ""}`}>
@@ -70,35 +126,24 @@ export function OptionsDrawer({
         {/* Audio Format Options */}
         {mode === "audio" && <AudioFormatSelector afmt={afmt} setAfmt={setAfmt} />}
 
-        {/* Dynamic Description Strip */}
-        <div className="status-bar">
-          <i className="ti ti-info-circle status-icon"></i>
-          <span className="status-text">
-            {mode === "video" ? (
-              <>
-                {t.singleInfoPre}
-                <b>{quality}p</b>
-                {t.singleInfoPost}
-              </>
-            ) : (
-              <>
-                {t.audioInfoPre}
-                <b>{afmt.toUpperCase()}</b>
-                {t.audioInfoPost}
-              </>
-            )}
-          </span>
+        {/* Unified Status and Size Strip */}
+        <div className="status-bar" style={{ marginTop: "12px" }}>
+          {isPrefetching ? (
+            <>
+              <div className="mini-spinner"></div>
+              <span className="status-text">{t.fetchingDetails}</span>
+            </>
+          ) : (
+            <>
+              <i className="ti ti-info-circle status-icon"></i>
+              <span className="status-text">
+                {renderStatusContent()}
+              </span>
+            </>
+          )}
         </div>
-
-        {/* Size Estimator Strip */}
-        {mode === "video" && (
-          <SizeEstimator
-            isPrefetching={isPrefetching}
-            mediaDetails={mediaDetails}
-            getSelectedQualitySize={getSelectedQualitySize}
-          />
-        )}
       </div>
     </div>
   );
 }
+

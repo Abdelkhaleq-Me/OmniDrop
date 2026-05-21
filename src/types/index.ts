@@ -80,6 +80,7 @@ export interface QualityInfo {
 export interface MediaDetails {
   is_playlist: boolean;
   max_height: number;
+  total_duration: number;
   qualities: QualityInfo[];
   media_info: MediaInfo | null;
 }
