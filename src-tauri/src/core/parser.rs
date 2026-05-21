@@ -144,7 +144,7 @@ pub struct MediaInfo {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct MetadataPayload {
+pub struct MetadataUpdatedData {
     pub task_id: String,
     pub info: MediaInfo,
 }

@@ -108,7 +108,7 @@ pub async fn run_download(
             file_size,
         ).await;
 
-        let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataPayload {
+        let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataUpdatedData {
             task_id: task_id.clone(),
             info: info.clone(),
         });
@@ -140,7 +140,7 @@ pub async fn run_download(
                     file_size,
                 ).await;
 
-                let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataPayload {
+                let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataUpdatedData {
                     task_id: task_id.clone(),
                     info: info.clone(),
                 });
@@ -632,7 +632,7 @@ async fn process_event_stream(
                                 file_size,
                             ).await;
 
-                            let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataPayload {
+                            let _ = app_handle.emit("download-metadata", crate::core::parser::MetadataUpdatedData {
                                 task_id: task_id.to_string(),
                                 info: info.clone(),
                             });

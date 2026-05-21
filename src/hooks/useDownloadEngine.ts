@@ -15,6 +15,7 @@ import type {
   PlaylistStartedData,
   DownloadOptions,
   MediaInfo,
+  MetadataUpdatedData,
 } from "../types";
 import type { ShowToastFn } from "./useToast";
 import type { Translations } from "../i18n/translations";
@@ -103,21 +104,21 @@ export function useDownloadEngine(
       });
     });
 
-    const unlistenMetadata = listen<{ task_id: string, info: MediaInfo }>("download-metadata", (event) => {
-      const payload = event.payload;
-      setDownloads((prev) => 
-        prev.map(d => 
-          d.id === payload.task_id 
-            ? { 
-                ...d, 
-                title: payload.info.title || d.title,
-                uploader: payload.info.uploader || d.uploader,
-                thumbnail_url: payload.info.thumbnail || d.thumbnail_url,
-                file_size: payload.info.filesize || payload.info.filesize_approx || d.file_size,
-                duration: payload.info.duration || d.duration,
-              } 
-            : d
-        )
+    const unlistenMetadata = listen<MetadataUpdatedData>("download-metadata", (event) => {
+      const { task_id, info } = event.payload;
+      setDownloads((prev) =>
+        prev.map((d) => {
+          if (d.id !== task_id) return d;
+          return {
+            ...d,
+            title:         info.title         ?? d.title,
+            uploader:      info.uploader       ?? d.uploader,
+            thumbnail_url: info.thumbnail      ?? d.thumbnail_url,
+            duration:      info.duration       ?? d.duration,
+            extension:     info.ext            ?? d.extension,
+            file_size:     info.filesize ?? info.filesize_approx ?? d.file_size,
+          };
+        })
       );
     });
 

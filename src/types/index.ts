@@ -113,3 +113,8 @@ export interface PlaylistInfoResponse {
     duration: number | null;
   }>;
 }
+
+export interface MetadataUpdatedData {
+  task_id: string;
+  info: MediaInfo;
+}
