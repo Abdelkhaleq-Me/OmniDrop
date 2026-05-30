@@ -73,11 +73,13 @@ export interface PlaylistStartedData {
 
 /** بيانات وصفية مُجلبة مسبقاً من الباكأند */
 export interface QualityInfo {
+  label: string;        // e.g. "360p", "720p", "1080p", "2K", "4K"
   height: number;
-  size_bytes: number | null;
+  size_bytes: number;   // دائماً موجود — إما حقيقي أو تقديري
 }
 
 export interface MediaDetails {
+  title: string;        // عنوان الفيديو أو قائمة التشغيل
   is_playlist: boolean;
   max_height: number;
   total_duration: number;
