@@ -93,6 +93,7 @@ export function useDownloadEngine(
   useEffect(() => {
     if (!isReady) return;
 
+    // حدث مُجمَّع: يصل خلال مرحلة التحميل الفعلي (batch ticker)
     const unlistenProgress = listen<ProgressData[]>("downloads-batch-progress", (event) => {
       const updates = event.payload;
       setLiveProgress((prev) => {
@@ -102,6 +103,16 @@ export function useDownloadEngine(
         }
         return next;
       });
+    });
+
+    // حدث منفرد: يصل في مرحلة fetching_metadata قبل بدء الـ batch ticker
+    // بدونه تبقى الواجهة صامتة تماماً بين بدء التحميل وبدء استقبال التقدم الحقيقي
+    const unlistenSingleProgress = listen<ProgressData>("download-progress", (event) => {
+      const update = event.payload;
+      setLiveProgress((prev) => ({
+        ...prev,
+        [update.task_id]: update,
+      }));
     });
 
     const unlistenMetadata = listen<MetadataUpdatedData>("download-metadata", (event) => {
@@ -173,6 +184,7 @@ export function useDownloadEngine(
 
     return () => {
       unlistenProgress.then((f) => f());
+      unlistenSingleProgress.then((f) => f());
       unlistenMetadata.then((f) => f());
       unlistenCompleted.then((f) => f());
       unlistenFailed.then((f) => f());
