@@ -9,16 +9,28 @@ interface AppConfigDto {
   max_concurrent_downloads: number;
 }
 
+interface DbStats {
+  total_downloads: number;
+  completed_downloads: number;
+  failed_downloads: number;
+  total_playlists: number;
+}
+
 export function SettingsTab() {
   const { t, lang } = useLang();
   const [config, setConfig] = useState<AppConfigDto | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [dbStats, setDbStats] = useState<DbStats | null>(null);
 
   // جلب الإعدادات الحالية عند فتح التبويب
   useEffect(() => {
     invoke<AppConfigDto>("get_app_config")
       .then(setConfig)
+      .catch(console.error);
+
+    invoke<DbStats>("get_db_stats")
+      .then(setDbStats)
       .catch(console.error);
   }, []);
 
@@ -105,8 +117,16 @@ export function SettingsTab() {
         {/* الحد الأقصى للتحميلات */}
         <div className="settings-row">
           <span className="settings-lbl">{t.activeLimits}</span>
-          <span className="settings-val">{config.max_concurrent_downloads} concurrent tasks</span>
-          {/* ملاحظة: هذا يتطلب إعادة تشغيل لتغييره فعلياً لأن Semaphore مُهيَّأ مرة واحدة */}
+          <input
+            type="number"
+            className="settings-input"
+            value={config.max_concurrent_downloads}
+            min={1}
+            max={20}
+            onChange={(e) =>
+              setConfig({ ...config, max_concurrent_downloads: parseInt(e.target.value) || 1 })
+            }
+          />
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
@@ -121,9 +141,29 @@ export function SettingsTab() {
 
       <div className="settings-card">
         <div className="settings-title">{t.systemStats}</div>
-        <div className="settings-desc" style={{ marginBottom: 0 }}>
-          {t.dbStatus}
-        </div>
+        <div className="settings-desc">{t.dbStatus}</div>
+        {dbStats ? (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10px 24px",
+            marginTop: 8,
+          }}>
+            {([
+              { label: t.dbTotal,     value: dbStats.total_downloads },
+              { label: t.dbCompleted, value: dbStats.completed_downloads },
+              { label: t.dbFailed,    value: dbStats.failed_downloads },
+              { label: t.dbPlaylists, value: dbStats.total_playlists },
+            ] as { label: string; value: number }[]).map(({ label, value }) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="settings-lbl" style={{ opacity: 0.75 }}>{label}</span>
+                <span style={{ fontWeight: 700, fontSize: 15, color: "var(--accent)" }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, opacity: 0.5, marginTop: 8 }}>...</div>
+        )}
       </div>
     </div>
   );
