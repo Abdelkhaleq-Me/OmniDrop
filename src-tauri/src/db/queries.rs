@@ -24,6 +24,7 @@ pub struct DownloadRecord {
     pub id: String,
     pub url: String,
     pub platform: String,
+    pub collection_id: Option<String>,
     pub title: Option<String>,
     pub uploader: Option<String>,
     pub thumbnail_url: Option<String>,
@@ -316,7 +317,7 @@ pub async fn get_all_downloads(
 ) -> Result<Vec<DownloadRecord>, AppError> {
     let records = sqlx::query_as::<_, DownloadRecord>(
         "SELECT
-            id, url, platform, title, uploader, thumbnail_url,
+            id, url, platform, collection_id, title, uploader, thumbnail_url,
             duration, file_path, file_size, extension, quality,
             status, error_msg, created_at, updated_at, completed_at
          FROM downloads
@@ -337,7 +338,7 @@ pub async fn get_active_downloads(
 ) -> Result<Vec<DownloadRecord>, AppError> {
     let records = sqlx::query_as::<_, DownloadRecord>(
         "SELECT
-            id, url, platform, title, uploader, thumbnail_url,
+            id, url, platform, collection_id, title, uploader, thumbnail_url,
             duration, file_path, file_size, extension, quality,
             status, error_msg, created_at, updated_at, completed_at
          FROM downloads

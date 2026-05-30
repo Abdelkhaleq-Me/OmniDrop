@@ -310,6 +310,7 @@ function App() {
           {activeTab === "playlists" && (
             <PlaylistsTab
               collections={collections}
+              downloads={downloads}
               onDeleteCollection={deleteCollection}
             />
           )}

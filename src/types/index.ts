@@ -8,6 +8,7 @@ export interface DownloadRecord {
   id: string;
   url: string;
   platform: string;
+  collection_id: string | null;
   title: string | null;
   uploader: string | null;
   thumbnail_url: string | null;
