@@ -13,6 +13,8 @@ interface HistoryTabProps {
   downloads: DownloadRecord[];
   onClearCompleted: () => void;
   onDeleteTask: (id: string) => void;
+  onLoadMore: () => Promise<void>;
+  hasMore: boolean;
   showToast: (msg: string, type: "success" | "error" | "info") => void;
 }
 
@@ -22,12 +24,21 @@ export function HistoryTab({
   downloads,
   onClearCompleted,
   onDeleteTask,
+  onLoadMore,
+  hasMore,
   showToast,
 }: HistoryTabProps) {
   const { lang, t } = useLang();
   const [historySearch, setHistorySearch] = useState("");
   const [historyFilter, setHistoryFilter] = useState<FilterType>("all");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    await onLoadMore();
+    setIsLoadingMore(false);
+  };
 
   const handleOpenFolder = async (filePath: string) => {
     await openFileFolder(filePath, showToast);
@@ -203,6 +214,28 @@ export function HistoryTab({
           </div>
         )}
       </div>
+
+      {/* زر تحميل المزيد — يظهر فقط عند وجود صفحات إضافية في DB */}
+      {hasMore && !historySearch && historyFilter === "all" && (
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+          <button
+            className="filter-ch"
+            onClick={handleLoadMore}
+            disabled={isLoadingMore}
+            style={{
+              padding: "5px 20px",
+              color: "var(--accent)",
+              border: "0.5px solid var(--accent)",
+              opacity: isLoadingMore ? 0.5 : 1,
+              cursor: isLoadingMore ? "not-allowed" : "pointer",
+            }}
+          >
+            {isLoadingMore
+              ? (lang === "ar" ? "جاري التحميل..." : "Loading...")
+              : (lang === "ar" ? "تحميل المزيد" : "Load More")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

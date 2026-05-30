@@ -20,11 +20,15 @@ import type {
 import type { ShowToastFn } from "./useToast";
 import type { Translations } from "../i18n/translations";
 
+const PAGE_SIZE = 50;
+
 interface UseDownloadEngineReturn {
   downloads: DownloadRecord[];
   collections: CollectionRecord[];
   liveProgress: Record<string, ProgressData>;
+  hasMore: boolean;
   refreshData: () => Promise<void>;
+  loadMore: () => Promise<void>;
   startDownload: (url: string, options: DownloadOptions, metadata?: MediaInfo | null) => Promise<void>;
   startPlaylistDownload: (url: string, options: DownloadOptions, selectedIndices?: number[]) => Promise<void>;
   cancelTask: (taskId: string) => Promise<void>;
@@ -41,19 +45,41 @@ export function useDownloadEngine(
   const [downloads, setDownloads] = useState<DownloadRecord[]>([]);
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [liveProgress, setLiveProgress] = useState<Record<string, ProgressData>>({});
+  const [hasMore, setHasMore] = useState(false);
+  const downloadsOffset = useRef(0); // يتتبع الصفحة الحالية
 
   // مرجع ثابت لـ t لتجنب إعادة تسجيل listeners عند تغيير اللغة
   const tRef = useRef(t);
   tRef.current = t;
 
+  // refreshData: يُعيد تحميل الصفحة الأولى دائماً (مُستدعى من الأحداث الآنية)
   const refreshData = useCallback(async () => {
     try {
-      const hist = await invoke<DownloadRecord[]>("get_download_history", { limit: 50, offset: 0 });
+      const hist = await invoke<DownloadRecord[]>("get_download_history", { limit: PAGE_SIZE, offset: 0 });
+      downloadsOffset.current = 0;
       setDownloads(hist);
+      setHasMore(hist.length === PAGE_SIZE);
       const colList = await invoke<CollectionRecord[]>("get_collection_history");
       setCollections(colList);
     } catch (e) {
       console.error("Error calling DB refresh", e);
+    }
+  }, []);
+
+  // loadMore: يُضيف الصفحة التالية إلى القائمة الحالية دون إعادة تحميلها
+  const loadMore = useCallback(async () => {
+    try {
+      const nextOffset = downloadsOffset.current + PAGE_SIZE;
+      const page = await invoke<DownloadRecord[]>("get_download_history", { limit: PAGE_SIZE, offset: nextOffset });
+      if (page.length === 0) {
+        setHasMore(false);
+        return;
+      }
+      downloadsOffset.current = nextOffset;
+      setDownloads((prev) => [...prev, ...page]);
+      setHasMore(page.length === PAGE_SIZE);
+    } catch (e) {
+      console.error("Error loading more downloads", e);
     }
   }, []);
 
@@ -270,7 +296,9 @@ export function useDownloadEngine(
     downloads,
     collections,
     liveProgress,
+    hasMore,
     refreshData,
+    loadMore,
     startDownload,
     startPlaylistDownload,
     cancelTask,

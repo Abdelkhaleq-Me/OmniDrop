@@ -52,6 +52,8 @@ function App() {
     startPlaylistDownload,
     cancelTask,
     deleteTask,
+    loadMore,
+    hasMore,
     deleteCollection,
     clearAll,
     clearCompleted,
@@ -298,6 +300,8 @@ function App() {
               downloads={historyItems}
               onClearCompleted={clearCompleted}
               onDeleteTask={deleteTask}
+              onLoadMore={loadMore}
+              hasMore={hasMore}
               showToast={showToast}
             />
           )}
