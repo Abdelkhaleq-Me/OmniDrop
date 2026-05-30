@@ -6,6 +6,26 @@
 import { useLang } from "../i18n/LangContext";
 import type { PlaylistVideoItem } from "../types";
 
+/**
+ * يستنتج رابط الصورة المصغّرة من رابط الفيديو ومعرّفه.
+ * يدعم يوتيوب فقط حالياً — باقي المنصات تُعيد null وتُعرض أيقونة بديلة.
+ */
+function getThumbUrl(video: PlaylistVideoItem): string | null {
+  const url = video.url || "";
+
+  // YouTube: youtube.com/watch?v=ID أو youtu.be/ID
+  if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    // videoId هنا موثوق لأن yt-dlp يُرجع ID يوتيوب الحقيقي
+    if (video.videoId) {
+      return `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`;
+    }
+  }
+
+  // TikTok، Instagram، Vimeo، SoundCloud، إلخ:
+  // لا توجد CDN عامة مجانية للصور المصغّرة — نعود للأيقونة البديلة
+  return null;
+}
+
 interface PlaylistModalProps {
   isOpen: boolean;
   isLoading: boolean;
@@ -122,9 +142,9 @@ export function PlaylistModal({
                         <i className="ti ti-check"></i>
                       </div>
                       <div className="modal-item-thumb">
-                        {video.videoId ? (
+                        {getThumbUrl(video) ? (
                           <img
-                            src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
+                            src={getThumbUrl(video)!}
                             alt=""
                             onError={(e) => (e.currentTarget.style.display = "none")}
                           />
